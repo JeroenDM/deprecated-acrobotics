@@ -1,0 +1,374 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>acrobotics.path &#8212; acrobotics 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for acrobotics.path</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Tools to specify a path which can have tolerance, hence the TolerancedNumber class.</span>
+
+<span class="sd">@author: jeroen</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">.util</span> <span class="k">import</span> <span class="n">HaltonSampler</span><span class="p">,</span> <span class="n">create_grid</span><span class="p">,</span> <span class="n">rot_x</span><span class="p">,</span> <span class="n">rot_y</span><span class="p">,</span> <span class="n">rot_z</span><span class="p">,</span> <span class="n">sample_SO3</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">sin</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sqrt</span><span class="p">,</span> <span class="n">pi</span>
+
+<span class="c1">#=============================================================================</span>
+<span class="c1"># Classes</span>
+<span class="c1">#=============================================================================</span>
+
+<div class="viewcode-block" id="TolerancedNumber"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.TolerancedNumber">[docs]</a><span class="k">class</span> <span class="nc">TolerancedNumber</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; A range on the numner line used to define path constraints</span>
+<span class="sd">    </span>
+<span class="sd">    It also has a nominal value in the range which can be used in cost</span>
+<span class="sd">    functions of some sort in the future. For example, if it is preffered</span>
+<span class="sd">    that the robot end-effector stays close to an optimal pose, but can</span>
+<span class="sd">    deviate if needed to avoid collision.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : float</span>
+<span class="sd">        Nominal / preffered value for this number</span>
+<span class="sd">    u : float</span>
+<span class="sd">        Upper limit.</span>
+<span class="sd">    l : float</span>
+<span class="sd">        lower limit</span>
+<span class="sd">    s : int</span>
+<span class="sd">        Number of samples used to produce descrete version of this number.</span>
+<span class="sd">    range : numpy.ndarray of float</span>
+<span class="sd">        A sampled version of the range on the number line, including limits.</span>
+<span class="sd">        The nominal value is not necessary included.</span>
+<span class="sd">    </span>
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Sampling for orientation is done uniformly at the moment.</span>
+<span class="sd">    In 3D this is no good and special sampling techniques for angles should be</span>
+<span class="sd">    used.</span>
+<span class="sd">    The sampled range is now an attribute, but memory wise it would be better</span>
+<span class="sd">    if it is a method. Then it is only descritized when needed.</span>
+<span class="sd">    But it the number of path points will probably be limited so I preffer this</span>
+<span class="sd">    simpler implementation for now.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nominal</span><span class="p">,</span> <span class="n">lower_bound</span><span class="p">,</span> <span class="n">upper_bound</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a toleranced number</span>
+<span class="sd">        </span>
+<span class="sd">        Nominal does not have to be in the middle,</span>
+<span class="sd">        it is the preffered value when we ever calculate some kind of cost.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        nominal : float</span>
+<span class="sd">            Nominal / preffered value for this number</span>
+<span class="sd">        lower_bound : float</span>
+<span class="sd">        upper_bound : float</span>
+<span class="sd">        samples : int</span>
+<span class="sd">            The number of samples taken when a sampled version of the number</span>
+<span class="sd">            is returned in the range attribute. (default = 10)</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; a = TolerancedNumber(0.7, 0.0, 1.0, samples = 6)</span>
+<span class="sd">        &gt;&gt;&gt; a.range</span>
+<span class="sd">        array([ 0. ,  0.2,  0.4,  0.6,  0.8,  1. ])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">nominal</span> <span class="o">&lt;</span> <span class="n">lower_bound</span> <span class="ow">or</span> <span class="n">nominal</span> <span class="o">&gt;</span> <span class="n">upper_bound</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nominal value must respect the bounds&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">nominal</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">u</span> <span class="o">=</span> <span class="n">upper_bound</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">l</span> <span class="o">=</span> <span class="n">lower_bound</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="n">samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="TolerancedNumber.set_samples"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.TolerancedNumber.set_samples">[docs]</a>    <span class="k">def</span> <span class="nf">set_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">samples</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="n">samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="TrajectoryPt"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.TrajectoryPt">[docs]</a><span class="k">class</span> <span class="nc">TrajectoryPt</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; Trajectory point for a desired end-effector pose in cartesian space</span>
+<span class="sd">    </span>
+<span class="sd">    This object bundles the constraints on the end-effector for one point</span>
+<span class="sd">    of a path.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dim : int</span>
+<span class="sd">        Pose dimensions, 3 for 2D planning, 6 for 3D planning.</span>
+<span class="sd">    p : list of numpy.ndarray of float or ppr.path.TolerancedNumber</span>
+<span class="sd">        Pose constraints for the end-effector (x, y, orientation).</span>
+<span class="sd">        Can be a fixed number (a float) or a TolerancedNumber</span>
+<span class="sd">    hasTolerance : list of bool</span>
+<span class="sd">        Indicates which elements of the pose are toleranced (True) and</span>
+<span class="sd">        fixed (False).</span>
+<span class="sd">    p_nominal : list of float</span>
+<span class="sd">        Same as p for fixed poses, the nominal value for a TolerancedNumber.</span>
+<span class="sd">    timing : float</span>
+<span class="sd">        Time in seconds it should be executed relative to the previous path</span>
+<span class="sd">        point. Not used in current version.</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Create a trajectory point at position (1.5, 3.1) with a symmetric</span>
+<span class="sd">    tolerance of 0.4 on the x position.</span>
+<span class="sd">    The robot orientation should be between 0 and pi / 4.</span>
+<span class="sd">    (No preffered orientation, so assumed in the middle, pi / 8)</span>
+
+<span class="sd">    &gt;&gt;&gt; x = TolerancedNumber(1.5, 1.0, 2.0)</span>
+<span class="sd">    &gt;&gt;&gt; y = 3.1</span>
+<span class="sd">    &gt;&gt;&gt; angle = TolerancedNumber(np.pi / 8, 0.0, np.pi / 4)</span>
+<span class="sd">    &gt;&gt;&gt; tp = TrajectoryPt([x, y, angle])</span>
+<span class="sd">    &gt;&gt;&gt; tp.p_nominal</span>
+<span class="sd">    array([ 1.5       ,  3.1       ,  0.39269908])</span>
+<span class="sd">    </span>
+<span class="sd">    A path is created by putting several trajectory points in a list.</span>
+<span class="sd">    For example a vertical path with tolerance along the x-axis:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; path = []</span>
+<span class="sd">    &gt;&gt;&gt; path.append(TrajectoryPt([TolerancedNumber(1.5, 1.0, 2.0), 0.0, 0]))</span>
+<span class="sd">    &gt;&gt;&gt; path.append(TrajectoryPt([TolerancedNumber(1.5, 1.0, 2.0), 0.5, 0]))</span>
+<span class="sd">    &gt;&gt;&gt; path.append(TrajectoryPt([TolerancedNumber(1.5, 1.0, 2.0), 1.0, 0]))</span>
+<span class="sd">    &gt;&gt;&gt; for p in path: print(p)</span>
+<span class="sd">    [ 1.5  0.   0. ]</span>
+<span class="sd">    [ 1.5  0.5  0. ]</span>
+<span class="sd">    [ 1.5  1.   0. ]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pee</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a trajectory point from a given pose</span>
+<span class="sd">        </span>
+<span class="sd">        [x_position, y_position, angle last joint with x axis]</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pee : list or numpy.ndarray of float or ppr.path.TolerancedNumber</span>
+<span class="sd">            Desired pose of the end-effector for this path point,</span>
+<span class="sd">            every value can be either a float or a TolerancedNumber</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pee</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="n">pee</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hasTolerance</span> <span class="o">=</span> <span class="p">[</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">pee</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">TolerancedNumber</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)]</span>
+        <span class="n">p_nominal</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hasTolerance</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">p_nominal</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">p_nominal</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p_nominal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p_nominal</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timing</span> <span class="o">=</span> <span class="mf">0.1</span> <span class="c1"># with respect to previous point</span>
+        
+        <span class="c1"># for use of halton sampling</span>
+        <span class="c1"># dimension is the number of toleranced numbers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hs</span> <span class="o">=</span> <span class="n">HaltonSampler</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hasTolerance</span><span class="p">))</span>
+    
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns string representation for printing</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        string</span>
+<span class="sd">            List with nominal values for x, y and orientation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_nominal</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="TrajectoryPt.discretise"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.TrajectoryPt.discretise">[docs]</a>    <span class="k">def</span> <span class="nf">discretise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns a discrete version of the range of a trajectory point</span>
+<span class="sd">        </span>
+<span class="sd">        Based on the sampled range in the Toleranced Numbers, a 3 dimensional grid</span>
+<span class="sd">        representing end-effector poses that obey the trajectory point constraints.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pt : ppr.path.TrajectoryPt</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Array with shape (M, 3) containing M possible poses for the robot</span>
+<span class="sd">            end-effector that  obey the trajectory point constraints.</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; x = TolerancedNumber(1, 0.5, 1.5, samples=3)</span>
+<span class="sd">        &gt;&gt;&gt; y = TolerancedNumber(0, -1, 1, samples=2)</span>
+<span class="sd">        &gt;&gt;&gt; pt = TrajectoryPt([x, y, 0])</span>
+<span class="sd">        &gt;&gt;&gt; pt.discretise()</span>
+<span class="sd">        array([[ 0.5, -1. ,  0. ],</span>
+<span class="sd">               [ 1. , -1. ,  0. ],</span>
+<span class="sd">               [ 1.5, -1. ,  0. ],</span>
+<span class="sd">               [ 0.5,  1. ,  0. ],</span>
+<span class="sd">               [ 1. ,  1. ,  0. ],</span>
+<span class="sd">               [ 1.5,  1. ,  0. ]])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hasTolerance</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">range</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">create_grid</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">grid</span></div>
+    
+<div class="viewcode-block" id="TrajectoryPt.get_samples"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.TrajectoryPt.get_samples">[docs]</a>    <span class="k">def</span> <span class="nf">get_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;random&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return sampled trajectory point based on values between 0 and 1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># check input</span>
+        <span class="n">sample_dim</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hasTolerance</span><span class="p">)</span> <span class="c1"># count the number of toleranced numbers</span>
+        
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;random&#39;</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">sample_dim</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;halton&#39;</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs</span><span class="o">.</span><span class="n">get_samples</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Method not implemented.&quot;</span><span class="p">)</span>
+            
+        <span class="c1"># arrange in array and rescale the samples</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hasTolerance</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="n">cnt</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">u</span> <span class="o">-</span> <span class="n">val</span><span class="o">.</span><span class="n">l</span><span class="p">)</span> <span class="o">+</span> <span class="n">val</span><span class="o">.</span><span class="n">l</span><span class="p">)</span>
+                <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">*</span> <span class="n">val</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span><span class="o">.</span><span class="n">T</span></div></div>
+
+<div class="viewcode-block" id="FreeOrientationPt"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.FreeOrientationPt">[docs]</a><span class="k">class</span> <span class="nc">FreeOrientationPt</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; Work in progress &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="FreeOrientationPt.get_samples"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.FreeOrientationPt.get_samples">[docs]</a>    <span class="k">def</span> <span class="nf">get_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_samples</span><span class="p">,</span> <span class="n">rep</span><span class="o">=</span><span class="s1">&#39;rpy&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Sample orientation, position is fixed for every sample</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">rep</span> <span class="o">==</span> <span class="s1">&#39;rpy&#39;</span><span class="p">:</span>
+            <span class="n">rpy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sample_SO3</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">num_samples</span><span class="p">,</span> <span class="n">rep</span><span class="o">=</span><span class="s1">&#39;rpy&#39;</span><span class="p">))</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="p">(</span><span class="n">num_samples</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">pos</span><span class="p">,</span> <span class="n">rpy</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">rep</span> <span class="o">==</span> <span class="s1">&#39;transform&#39;</span><span class="p">:</span>
+            <span class="n">Ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sample_SO3</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">num_samples</span><span class="p">,</span> <span class="n">rep</span><span class="o">=</span><span class="s1">&#39;transform&#39;</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">Ti</span> <span class="ow">in</span> <span class="n">Ts</span><span class="p">:</span>
+                <span class="n">Ti</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span>
+            <span class="k">return</span> <span class="n">Ts</span></div>
+    
+<div class="viewcode-block" id="FreeOrientationPt.discretise"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.FreeOrientationPt.discretise">[docs]</a>    <span class="k">def</span> <span class="nf">discretise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_samples</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="FreeOrientationPt.plot"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.FreeOrientationPt.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span> <span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span></div></div>
+  
+<span class="c1">#=============================================================================</span>
+<span class="c1"># Functions</span>
+<span class="c1">#=============================================================================</span>
+<div class="viewcode-block" id="point_to_frame"><a class="viewcode-back" href="../../api_doc.html#acrobotics.path.point_to_frame">[docs]</a><span class="k">def</span> <span class="nf">point_to_frame</span><span class="p">(</span><span class="n">p</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Convert pose as 6-element vector to transform matrix</span>
+<span class="sd">    </span>
+<span class="sd">    [x, y, z, ox, oy, oz] three position parameters and three paramters</span>
+<span class="sd">    for the xyz-euler angles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">T</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">T</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">rot_x</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">rot_y</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">4</span><span class="p">]),</span> <span class="n">rot_z</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">5</span><span class="p">])))</span>
+    <span class="k">return</span> <span class="n">T</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">acrobotics</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">API documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api_doc.html">API Acro Robotics package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Jeroen De Maeyer.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,843 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>API Acro Robotics package &#8212; acrobotics 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Acro Robotics Python Code (acrobotics)" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="api-acro-robotics-package">
+<h1>API Acro Robotics package<a class="headerlink" href="#api-acro-robotics-package" title="Permalink to this headline">¶</a></h1>
+<p>The package is organized different modules for different tools,
+mostly based on the division of pysical objects an separat task.</p>
+<div class="section" id="module-acrobotics.util">
+<span id="utility-functions"></span><h2>Utility functions<a class="headerlink" href="#module-acrobotics.util" title="Permalink to this headline">¶</a></h2>
+<p>General purpose functions to create matrices and plot things.</p>
+<dl class="class">
+<dt id="acrobotics.util.HaltonSampler">
+<em class="property">class </em><code class="descclassname">acrobotics.util.</code><code class="descname">HaltonSampler</code><span class="sig-paren">(</span><em>dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#HaltonSampler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.HaltonSampler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="acrobotics.util.HaltonSampler.get_samples">
+<code class="descname">get_samples</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#HaltonSampler.get_samples"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.HaltonSampler.get_samples" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.create_grid">
+<code class="descclassname">acrobotics.util.</code><code class="descname">create_grid</code><span class="sig-paren">(</span><em>r</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#create_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.create_grid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an N dimensional grid from N arrays</p>
+<p>Based on N lists of numbers we create an N dimensional grid containing
+all possible combinations of the numbers in the different lists.
+An array can also be a single float if their is now tolerance range.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>r</strong> (<em>list of numpy.ndarray of float</em>) – A list containing numpy vectors (1D arrays) representing a sampled
+version of a range along an axis.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Array with shape (M, N) where N is the number of input arrays and
+M the number of different combinations of the data in the input arrays.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]),</span> <span class="mi">99</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">create_grid</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="go">array([[ 0,  1, 99],</span>
+<span class="go">       [ 1,  1, 99],</span>
+<span class="go">       [ 0,  2, 99],</span>
+<span class="go">       [ 1,  2, 99],</span>
+<span class="go">       [ 0,  3, 99],</span>
+<span class="go">       [ 1,  3, 99]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.get_default_axes3d">
+<code class="descclassname">acrobotics.util.</code><code class="descname">get_default_axes3d</code><span class="sig-paren">(</span><em>xlim=[-1, 1], ylim=[-1, 1], zlim=[-1, 1]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#get_default_axes3d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.get_default_axes3d" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.next_prime">
+<code class="descclassname">acrobotics.util.</code><code class="descname">next_prime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#next_prime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.next_prime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.plot_reference_frame">
+<code class="descclassname">acrobotics.util.</code><code class="descname">plot_reference_frame</code><span class="sig-paren">(</span><em>ax</em>, <em>tf=None</em>, <em>l=0.2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#plot_reference_frame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.plot_reference_frame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot xyz-axes on axes3d object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ax</strong> (<em>mpl_toolkits.mplot3d.Axes3D</em>) – Axes object for 3D plotting.</li>
+<li><strong>tf</strong> (<em>np.array of float</em>) – Transform to specify location of axes. Plots in origin if None.</li>
+<li><strong>l</strong> (<em>float</em>) – The length of the axes plotted.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.pose_x">
+<code class="descclassname">acrobotics.util.</code><code class="descname">pose_x</code><span class="sig-paren">(</span><em>alfa</em>, <em>x</em>, <em>y</em>, <em>z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#pose_x"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.pose_x" title="Permalink to this definition">¶</a></dt>
+<dd><p>Homogenous transform with rotation around x-axis and translation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.pose_y">
+<code class="descclassname">acrobotics.util.</code><code class="descname">pose_y</code><span class="sig-paren">(</span><em>alfa</em>, <em>x</em>, <em>y</em>, <em>z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#pose_y"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.pose_y" title="Permalink to this definition">¶</a></dt>
+<dd><p>Homogenous transform with rotation around y-axis and translation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.pose_z">
+<code class="descclassname">acrobotics.util.</code><code class="descname">pose_z</code><span class="sig-paren">(</span><em>alfa</em>, <em>x</em>, <em>y</em>, <em>z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#pose_z"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.pose_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Homogenous transform with rotation around z-axis and translation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.rot_x">
+<code class="descclassname">acrobotics.util.</code><code class="descname">rot_x</code><span class="sig-paren">(</span><em>alfa</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#rot_x"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.rot_x" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.rot_y">
+<code class="descclassname">acrobotics.util.</code><code class="descname">rot_y</code><span class="sig-paren">(</span><em>alfa</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#rot_y"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.rot_y" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.rot_z">
+<code class="descclassname">acrobotics.util.</code><code class="descname">rot_z</code><span class="sig-paren">(</span><em>alfa</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#rot_z"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.rot_z" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.sample_SO3">
+<code class="descclassname">acrobotics.util.</code><code class="descname">sample_SO3</code><span class="sig-paren">(</span><em>n=10</em>, <em>rep='quat'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#sample_SO3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.sample_SO3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a random unit quaternion.
+Uniformly distributed across the rotation space
+As per: <a class="reference external" href="http://planning.cs.uiuc.edu/node198.html">http://planning.cs.uiuc.edu/node198.html</a>
+and code from <a class="reference external" href="http://kieranwynn.github.io/pyquaternion">http://kieranwynn.github.io/pyquaternion</a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.tf_inverse">
+<code class="descclassname">acrobotics.util.</code><code class="descname">tf_inverse</code><span class="sig-paren">(</span><em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#tf_inverse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.tf_inverse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Efficient inverse of a homogenous transform.</p>
+<p>(Normal matrix inversion would be a bad idea.)
+Returns a copy, not inplace!</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.util.vdc">
+<code class="descclassname">acrobotics.util.</code><code class="descname">vdc</code><span class="sig-paren">(</span><em>n</em>, <em>base=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/util.html#vdc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.util.vdc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create van der Corput sequence</p>
+<p>source for van der Corput and Halton sampling code
+<a class="reference external" href="https://laszukdawid.com/2017/02/04/halton-sequence-in-python/">https://laszukdawid.com/2017/02/04/halton-sequence-in-python/</a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-acrobotics.geometry">
+<span id="geometric-shapes"></span><h2>Geometric shapes<a class="headerlink" href="#module-acrobotics.geometry" title="Permalink to this headline">¶</a></h2>
+<p>Wrap the C++ box object as a general python shape.
+Other shapes could be added to the C++ code and used by the shape class.</p>
+<p>Plotting shapes is implemented here.
+In addition the class Colleciont groups shapes with a transforms to define
+a shape existing of multiple boxes.</p>
+<p>info on collision checking
+<a class="reference external" href="https://gamedev.stackexchange.com/questions/44500/how-many-and-which-axes-to-use-for-3d-obb-collision-with-sat">https://gamedev.stackexchange.com/questions/44500/how-many-and-which-axes-to-use-for-3d-obb-collision-with-sat</a></p>
+<p>&#64;author: jeroen</p>
+<dl class="class">
+<dt id="acrobotics.geometry.Collection">
+<em class="property">class </em><code class="descclassname">acrobotics.geometry.</code><code class="descname">Collection</code><span class="sig-paren">(</span><em>shapes</em>, <em>tf_shapes</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/geometry.html#Collection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.geometry.Collection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>shapes and there transforms in one class</p>
+<dl class="method">
+<dt id="acrobotics.geometry.Collection.get_shapes">
+<code class="descname">get_shapes</code><span class="sig-paren">(</span><em>tf=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/geometry.html#Collection.get_shapes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.geometry.Collection.get_shapes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.geometry.Collection.plot">
+<code class="descname">plot</code><span class="sig-paren">(</span><em>ax</em>, <em>*arg</em>, <em>**kwarg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/geometry.html#Collection.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.geometry.Collection.plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.geometry.Shape">
+<em class="property">class </em><code class="descclassname">acrobotics.geometry.</code><code class="descname">Shape</code><span class="sig-paren">(</span><em>x_width</em>, <em>y_width</em>, <em>z_width</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/geometry.html#Shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.geometry.Shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.cpp.geometry.Box</span></code></p>
+<p>Wrapper class for C++ box to enable plotting and transforming the box</p>
+<p>There are two versions of the plot functions, I forgot why.
+It probably has to do with animating stuff.</p>
+<dl class="method">
+<dt id="acrobotics.geometry.Shape.get_empty_lines">
+<code class="descname">get_empty_lines</code><span class="sig-paren">(</span><em>ax</em>, <em>*arg</em>, <em>**kwarg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/geometry.html#Shape.get_empty_lines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.geometry.Shape.get_empty_lines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create empty lines to initialize an animation</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.geometry.Shape.plot">
+<code class="descname">plot</code><span class="sig-paren">(</span><em>ax</em>, <em>tf</em>, <em>*arg</em>, <em>**kwarg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/geometry.html#Shape.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.geometry.Shape.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a box as lines on a given axes_handle.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">acrobotics.util</span> <span class="k">import</span> <span class="n">get_default_axes3d</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">get_default_axes3d</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shape</span> <span class="o">=</span> <span class="n">Shape</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shape</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">tf</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.geometry.Shape.plot_2">
+<code class="descname">plot_2</code><span class="sig-paren">(</span><em>ax</em>, <em>*arg</em>, <em>**kwarg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/geometry.html#Shape.plot_2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.geometry.Shape.plot_2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.geometry.Shape.update_lines">
+<code class="descname">update_lines</code><span class="sig-paren">(</span><em>lines</em>, <em>tf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/geometry.html#Shape.update_lines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.geometry.Shape.update_lines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update existing lines on a plot using the given transform tf as Box position</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.geometry.Shape.update_lines_2">
+<code class="descname">update_lines_2</code><span class="sig-paren">(</span><em>lines</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/geometry.html#Shape.update_lines_2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.geometry.Shape.update_lines_2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-acrobotics.path">
+<span id="specify-a-task-path"></span><h2>Specify a task/path<a class="headerlink" href="#module-acrobotics.path" title="Permalink to this headline">¶</a></h2>
+<p>Tools to specify a path which can have tolerance, hence the TolerancedNumber class.</p>
+<p>&#64;author: jeroen</p>
+<dl class="class">
+<dt id="acrobotics.path.FreeOrientationPt">
+<em class="property">class </em><code class="descclassname">acrobotics.path.</code><code class="descname">FreeOrientationPt</code><span class="sig-paren">(</span><em>position</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#FreeOrientationPt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.FreeOrientationPt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Work in progress</p>
+<dl class="method">
+<dt id="acrobotics.path.FreeOrientationPt.discretise">
+<code class="descname">discretise</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#FreeOrientationPt.discretise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.FreeOrientationPt.discretise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.path.FreeOrientationPt.get_samples">
+<code class="descname">get_samples</code><span class="sig-paren">(</span><em>num_samples</em>, <em>rep='rpy'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#FreeOrientationPt.get_samples"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.FreeOrientationPt.get_samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample orientation, position is fixed for every sample</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.path.FreeOrientationPt.plot">
+<code class="descname">plot</code><span class="sig-paren">(</span><em>ax</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#FreeOrientationPt.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.FreeOrientationPt.plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.path.TolerancedNumber">
+<em class="property">class </em><code class="descclassname">acrobotics.path.</code><code class="descname">TolerancedNumber</code><span class="sig-paren">(</span><em>nominal</em>, <em>lower_bound</em>, <em>upper_bound</em>, <em>samples=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#TolerancedNumber"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.TolerancedNumber" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A range on the numner line used to define path constraints</p>
+<p>It also has a nominal value in the range which can be used in cost
+functions of some sort in the future. For example, if it is preffered
+that the robot end-effector stays close to an optimal pose, but can
+deviate if needed to avoid collision.</p>
+<dl class="attribute">
+<dt id="acrobotics.path.TolerancedNumber.n">
+<code class="descname">n</code><a class="headerlink" href="#acrobotics.path.TolerancedNumber.n" title="Permalink to this definition">¶</a></dt>
+<dd><p>Nominal / preffered value for this number</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.path.TolerancedNumber.u">
+<code class="descname">u</code><a class="headerlink" href="#acrobotics.path.TolerancedNumber.u" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upper limit.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.path.TolerancedNumber.l">
+<code class="descname">l</code><a class="headerlink" href="#acrobotics.path.TolerancedNumber.l" title="Permalink to this definition">¶</a></dt>
+<dd><p>lower limit</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.path.TolerancedNumber.s">
+<code class="descname">s</code><a class="headerlink" href="#acrobotics.path.TolerancedNumber.s" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of samples used to produce descrete version of this number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.path.TolerancedNumber.range">
+<code class="descname">range</code><a class="headerlink" href="#acrobotics.path.TolerancedNumber.range" title="Permalink to this definition">¶</a></dt>
+<dd><p>A sampled version of the range on the number line, including limits.
+The nominal value is not necessary included.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">numpy.ndarray of float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<p class="rubric">Notes</p>
+<p>Sampling for orientation is done uniformly at the moment.
+In 3D this is no good and special sampling techniques for angles should be
+used.
+The sampled range is now an attribute, but memory wise it would be better
+if it is a method. Then it is only descritized when needed.
+But it the number of path points will probably be limited so I preffer this
+simpler implementation for now.</p>
+<dl class="method">
+<dt id="acrobotics.path.TolerancedNumber.set_samples">
+<code class="descname">set_samples</code><span class="sig-paren">(</span><em>samples</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#TolerancedNumber.set_samples"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.TolerancedNumber.set_samples" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.path.TrajectoryPt">
+<em class="property">class </em><code class="descclassname">acrobotics.path.</code><code class="descname">TrajectoryPt</code><span class="sig-paren">(</span><em>pee</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#TrajectoryPt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.TrajectoryPt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Trajectory point for a desired end-effector pose in cartesian space</p>
+<p>This object bundles the constraints on the end-effector for one point
+of a path.</p>
+<dl class="attribute">
+<dt id="acrobotics.path.TrajectoryPt.dim">
+<code class="descname">dim</code><a class="headerlink" href="#acrobotics.path.TrajectoryPt.dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pose dimensions, 3 for 2D planning, 6 for 3D planning.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.path.TrajectoryPt.p">
+<code class="descname">p</code><a class="headerlink" href="#acrobotics.path.TrajectoryPt.p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pose constraints for the end-effector (x, y, orientation).
+Can be a fixed number (a float) or a TolerancedNumber</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list of numpy.ndarray of float or ppr.path.TolerancedNumber</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.path.TrajectoryPt.hasTolerance">
+<code class="descname">hasTolerance</code><a class="headerlink" href="#acrobotics.path.TrajectoryPt.hasTolerance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates which elements of the pose are toleranced (True) and
+fixed (False).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list of bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.path.TrajectoryPt.p_nominal">
+<code class="descname">p_nominal</code><a class="headerlink" href="#acrobotics.path.TrajectoryPt.p_nominal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as p for fixed poses, the nominal value for a TolerancedNumber.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list of float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.path.TrajectoryPt.timing">
+<code class="descname">timing</code><a class="headerlink" href="#acrobotics.path.TrajectoryPt.timing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Time in seconds it should be executed relative to the previous path
+point. Not used in current version.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<p class="rubric">Examples</p>
+<p>Create a trajectory point at position (1.5, 3.1) with a symmetric
+tolerance of 0.4 on the x position.
+The robot orientation should be between 0 and pi / 4.
+(No preffered orientation, so assumed in the middle, pi / 8)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">TolerancedNumber</span><span class="p">(</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="mf">3.1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">angle</span> <span class="o">=</span> <span class="n">TolerancedNumber</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">8</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">4</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tp</span> <span class="o">=</span> <span class="n">TrajectoryPt</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">angle</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tp</span><span class="o">.</span><span class="n">p_nominal</span>
+<span class="go">array([ 1.5       ,  3.1       ,  0.39269908])</span>
+</pre></div>
+</div>
+<p>A path is created by putting several trajectory points in a list.
+For example a vertical path with tolerance along the x-axis:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TrajectoryPt</span><span class="p">([</span><span class="n">TolerancedNumber</span><span class="p">(</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TrajectoryPt</span><span class="p">([</span><span class="n">TolerancedNumber</span><span class="p">(</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TrajectoryPt</span><span class="p">([</span><span class="n">TolerancedNumber</span><span class="p">(</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+<span class="go">[ 1.5  0.   0. ]</span>
+<span class="go">[ 1.5  0.5  0. ]</span>
+<span class="go">[ 1.5  1.   0. ]</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="acrobotics.path.TrajectoryPt.discretise">
+<code class="descname">discretise</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#TrajectoryPt.discretise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.TrajectoryPt.discretise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a discrete version of the range of a trajectory point</p>
+<p>Based on the sampled range in the Toleranced Numbers, a 3 dimensional grid
+representing end-effector poses that obey the trajectory point constraints.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pt</strong> (<em>ppr.path.TrajectoryPt</em>) – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Array with shape (M, 3) containing M possible poses for the robot
+end-effector that  obey the trajectory point constraints.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">TolerancedNumber</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">TolerancedNumber</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pt</span> <span class="o">=</span> <span class="n">TrajectoryPt</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pt</span><span class="o">.</span><span class="n">discretise</span><span class="p">()</span>
+<span class="go">array([[ 0.5, -1. ,  0. ],</span>
+<span class="go">       [ 1. , -1. ,  0. ],</span>
+<span class="go">       [ 1.5, -1. ,  0. ],</span>
+<span class="go">       [ 0.5,  1. ,  0. ],</span>
+<span class="go">       [ 1. ,  1. ,  0. ],</span>
+<span class="go">       [ 1.5,  1. ,  0. ]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.path.TrajectoryPt.get_samples">
+<code class="descname">get_samples</code><span class="sig-paren">(</span><em>n</em>, <em>method='random'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#TrajectoryPt.get_samples"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.TrajectoryPt.get_samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return sampled trajectory point based on values between 0 and 1</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="acrobotics.path.point_to_frame">
+<code class="descclassname">acrobotics.path.</code><code class="descname">point_to_frame</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/path.html#point_to_frame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.path.point_to_frame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert pose as 6-element vector to transform matrix</p>
+<p>[x, y, z, ox, oy, oz] three position parameters and three paramters
+for the xyz-euler angles.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-acrobotics.robot">
+<span id="robots"></span><h2>Robots!<a class="headerlink" href="#module-acrobotics.robot" title="Permalink to this headline">¶</a></h2>
+<p>Defines a general Robot class and implentations of specific robots.
+Forward kinematics are included in the general robot.
+Inverse kinematics are implemented for specific robots
+(3R planar arm and 6DOF Kuka).</p>
+<dl class="class">
+<dt id="acrobotics.robot.AnthropomorphicArm">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">AnthropomorphicArm</code><span class="sig-paren">(</span><em>a2=1</em>, <em>a3=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#AnthropomorphicArm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.AnthropomorphicArm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#acrobotics.robot.Robot" title="acrobotics.robot.Robot"><code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.robot.Robot</span></code></a></p>
+<p>Robot defined on page 73 in book Siciliano</p>
+<dl class="method">
+<dt id="acrobotics.robot.AnthropomorphicArm.ik">
+<code class="descname">ik</code><span class="sig-paren">(</span><em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#AnthropomorphicArm.ik"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.AnthropomorphicArm.ik" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.Arm2">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">Arm2</code><span class="sig-paren">(</span><em>a1=1</em>, <em>a2=1</em>, <em>a3=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Arm2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Arm2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#acrobotics.robot.Robot" title="acrobotics.robot.Robot"><code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.robot.Robot</span></code></a></p>
+<p>Articulated arm with first link length is NOT zeros
+In addition the last frame is rotated to get the Z axis pointing out
+along the hypothetical 4 joint when adding a wrist</p>
+<dl class="method">
+<dt id="acrobotics.robot.Arm2.ik">
+<code class="descname">ik</code><span class="sig-paren">(</span><em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Arm2.ik"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Arm2.ik" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.DHLink">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">DHLink</code><span class="sig-paren">(</span><em>a</em>, <em>alpha</em>, <em>d</em>, <em>theta</em><span class="sig-paren">)</span><a class="headerlink" href="#acrobotics.robot.DHLink" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+<dl class="attribute">
+<dt id="acrobotics.robot.DHLink.a">
+<code class="descname">a</code><a class="headerlink" href="#acrobotics.robot.DHLink.a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.robot.DHLink.alpha">
+<code class="descname">alpha</code><a class="headerlink" href="#acrobotics.robot.DHLink.alpha" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.robot.DHLink.d">
+<code class="descname">d</code><a class="headerlink" href="#acrobotics.robot.DHLink.d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.robot.DHLink.theta">
+<code class="descname">theta</code><a class="headerlink" href="#acrobotics.robot.DHLink.theta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 3</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.JointLimit">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">JointLimit</code><span class="sig-paren">(</span><em>lower</em>, <em>upper</em><span class="sig-paren">)</span><a class="headerlink" href="#acrobotics.robot.JointLimit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+<dl class="attribute">
+<dt id="acrobotics.robot.JointLimit.lower">
+<code class="descname">lower</code><a class="headerlink" href="#acrobotics.robot.JointLimit.lower" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="acrobotics.robot.JointLimit.upper">
+<code class="descname">upper</code><a class="headerlink" href="#acrobotics.robot.JointLimit.upper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.Kuka">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">Kuka</code><span class="sig-paren">(</span><em>a1=0.18</em>, <em>a2=0.6</em>, <em>d4=0.62</em>, <em>d6=0.115</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Kuka"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Kuka" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#acrobotics.robot.Robot" title="acrobotics.robot.Robot"><code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.robot.Robot</span></code></a></p>
+<p>Robot combining AnthropomorphicArm and SphericalWrist</p>
+<dl class="method">
+<dt id="acrobotics.robot.Kuka.ik">
+<code class="descname">ik</code><span class="sig-paren">(</span><em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Kuka.ik"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Kuka.ik" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.KukaOnRail">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">KukaOnRail</code><span class="sig-paren">(</span><em>a1=0.18</em>, <em>a2=0.6</em>, <em>d4=0.62</em>, <em>d6=0.115</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#KukaOnRail"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.KukaOnRail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#acrobotics.robot.Robot" title="acrobotics.robot.Robot"><code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.robot.Robot</span></code></a></p>
+<dl class="method">
+<dt id="acrobotics.robot.KukaOnRail.ik">
+<code class="descname">ik</code><span class="sig-paren">(</span><em>T</em>, <em>q_fixed</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#KukaOnRail.ik"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.KukaOnRail.ik" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.Link">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">Link</code><span class="sig-paren">(</span><em>dh_parameters</em>, <em>joint_type</em>, <em>shape</em>, <em>tf_shape=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Link"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Link" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Robot link according to the Denavit-Hartenberg convention.</p>
+<dl class="method">
+<dt id="acrobotics.robot.Link.get_link_relative_transform">
+<code class="descname">get_link_relative_transform</code><span class="sig-paren">(</span><em>qi</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Link.get_link_relative_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Link.get_link_relative_transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>transformation matrix from link i relative to i-1</p>
+<p>Links and joints are numbered from 1 to ndof, but python
+indexing of these links goes from 0 to ndof-1!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Link.plot">
+<code class="descname">plot</code><span class="sig-paren">(</span><em>ax</em>, <em>tf</em>, <em>*arg</em>, <em>**kwarg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Link.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Link.plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.PlanarArm">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">PlanarArm</code><span class="sig-paren">(</span><em>a1=1</em>, <em>a2=1</em>, <em>a3=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#PlanarArm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.PlanarArm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#acrobotics.robot.Robot" title="acrobotics.robot.Robot"><code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.robot.Robot</span></code></a></p>
+<p>Robot defined on page 69 in book Siciliano</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.Puma">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">Puma</code><span class="sig-paren">(</span><em>a3=0.432</em>, <em>a4=0.0203</em>, <em>d1=0.6</em>, <em>d3=0.1245</em>, <em>d4=0.432</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Puma"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Puma" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#acrobotics.robot.Robot" title="acrobotics.robot.Robot"><code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.robot.Robot</span></code></a></p>
+<p>Puma parameters from <a class="reference external" href="https://github.com/uw-biorobotics/IKBT">https://github.com/uw-biorobotics/IKBT</a></p>
+<p>Note that I use the convention of Siciliano for the a index for
+a3 and a4</p>
+<p>ik code was in the old version, but the code was from someone else
+and I did not use it. TODO add link here.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.Robot">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">Robot</code><span class="sig-paren">(</span><em>links</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Robot kinematics and shape</p>
+<p>(inital joint values not implemented)</p>
+<dl class="method">
+<dt id="acrobotics.robot.Robot.animate_path">
+<code class="descname">animate_path</code><span class="sig-paren">(</span><em>fig</em>, <em>ax</em>, <em>joint_space_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.animate_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.animate_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.check_self_collision">
+<code class="descname">check_self_collision</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.check_self_collision"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.check_self_collision" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.fk">
+<code class="descname">fk</code><span class="sig-paren">(</span><em>q</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.fk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.fk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return end effector frame, either last link, or tool frame
+if tool available</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.fk_all_links">
+<code class="descname">fk_all_links</code><span class="sig-paren">(</span><em>q</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.fk_all_links"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.fk_all_links" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return link frames (not base or tool)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.get_shapes">
+<code class="descname">get_shapes</code><span class="sig-paren">(</span><em>q</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.get_shapes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.get_shapes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.is_in_collision">
+<code class="descname">is_in_collision</code><span class="sig-paren">(</span><em>q</em>, <em>scene</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.is_in_collision"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.is_in_collision" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.plot">
+<code class="descname">plot</code><span class="sig-paren">(</span><em>ax</em>, <em>q</em>, <em>*arg</em>, <em>**kwarg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.plot_kinematics">
+<code class="descname">plot_kinematics</code><span class="sig-paren">(</span><em>ax</em>, <em>q</em>, <em>*arg</em>, <em>**kwarg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.plot_kinematics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.plot_kinematics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.plot_path">
+<code class="descname">plot_path</code><span class="sig-paren">(</span><em>ax</em>, <em>joint_space_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.plot_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.plot_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.set_base_shape">
+<code class="descname">set_base_shape</code><span class="sig-paren">(</span><em>shape</em>, <em>tf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.set_base_shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.set_base_shape" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.set_base_tf">
+<code class="descname">set_base_tf</code><span class="sig-paren">(</span><em>tf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.set_base_tf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.set_base_tf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.set_joint_limits">
+<code class="descname">set_joint_limits</code><span class="sig-paren">(</span><em>joint_limits</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.set_joint_limits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.set_joint_limits" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="acrobotics.robot.Robot.set_tool">
+<code class="descname">set_tool</code><span class="sig-paren">(</span><em>tool</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Robot.set_tool"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Robot.set_tool" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.SphericalArm">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">SphericalArm</code><span class="sig-paren">(</span><em>d2=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#SphericalArm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.SphericalArm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#acrobotics.robot.Robot" title="acrobotics.robot.Robot"><code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.robot.Robot</span></code></a></p>
+<p>Robot defined on page 72 in book Siciliano</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.SphericalWrist">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">SphericalWrist</code><span class="sig-paren">(</span><em>d3=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#SphericalWrist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.SphericalWrist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#acrobotics.robot.Robot" title="acrobotics.robot.Robot"><code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.robot.Robot</span></code></a></p>
+<p>Robot defined on page 75 in book Siciliano</p>
+<dl class="method">
+<dt id="acrobotics.robot.SphericalWrist.ik">
+<code class="descname">ik</code><span class="sig-paren">(</span><em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#SphericalWrist.ik"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.SphericalWrist.ik" title="Permalink to this definition">¶</a></dt>
+<dd><p>TODO add base frame correction</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="acrobotics.robot.Tool">
+<em class="property">class </em><code class="descclassname">acrobotics.robot.</code><code class="descname">Tool</code><span class="sig-paren">(</span><em>shapes</em>, <em>tf_shapes</em>, <em>tf_tool_tip</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/acrobotics/robot.html#Tool"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#acrobotics.robot.Tool" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#acrobotics.geometry.Collection" title="acrobotics.geometry.Collection"><code class="xref py py-class docutils literal notranslate"><span class="pre">acrobotics.geometry.Collection</span></code></a></p>
+<p>Group tool shapes and pose</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">acrobotics</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">API documentation:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Acro Robotics package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Acro Robotics Python Code (acrobotics)</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Jeroen De Maeyer.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/api_doc.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

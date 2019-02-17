@@ -1,0 +1,723 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>acrobotics.robot &#8212; acrobotics 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for acrobotics.robot</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Defines a general Robot class and implentations of specific robots.</span>
+<span class="sd">Forward kinematics are included in the general robot.</span>
+<span class="sd">Inverse kinematics are implemented for specific robots</span>
+<span class="sd">(3R planar arm and 6DOF Kuka).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">array</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">sqrt</span><span class="p">,</span> <span class="n">arctan2</span><span class="p">,</span> <span class="n">sign</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">animation</span>
+<span class="kn">from</span> <span class="nn">.geometry</span> <span class="k">import</span> <span class="n">Shape</span><span class="p">,</span> <span class="n">Collection</span>
+<span class="kn">from</span> <span class="nn">.util</span> <span class="k">import</span> <span class="n">tf_inverse</span><span class="p">,</span> <span class="n">pose_x</span><span class="p">,</span> <span class="n">plot_reference_frame</span>
+
+<span class="c1"># use named tuples to make data more readable</span>
+<span class="n">JointLimit</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;JointLimit&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;lower&#39;</span><span class="p">,</span> <span class="s1">&#39;upper&#39;</span><span class="p">])</span>
+<span class="n">DHLink</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;DHLink&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">,</span> <span class="s1">&#39;theta&#39;</span><span class="p">])</span>
+
+<div class="viewcode-block" id="Link"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Link">[docs]</a><span class="k">class</span> <span class="nc">Link</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; Robot link according to the Denavit-Hartenberg convention. &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dh_parameters</span><span class="p">,</span> <span class="n">joint_type</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">tf_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dh</span> <span class="o">=</span> <span class="n">dh_parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joint_type</span> <span class="o">=</span> <span class="n">joint_type</span>
+        <span class="k">if</span> <span class="n">tf_shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># default value</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tf_shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+            <span class="c1"># move back along x-axis</span>
+            <span class="c1">#self.tf_rel[0, 3] = -self.dh.a</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tf_shape</span> <span class="o">=</span> <span class="n">tf_shape</span>
+    
+<div class="viewcode-block" id="Link.get_link_relative_transform"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Link.get_link_relative_transform">[docs]</a>    <span class="k">def</span> <span class="nf">get_link_relative_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qi</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; transformation matrix from link i relative to i-1</span>
+<span class="sd">        </span>
+<span class="sd">        Links and joints are numbered from 1 to ndof, but python</span>
+<span class="sd">        indexing of these links goes from 0 to ndof-1!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">joint_type</span> <span class="o">==</span> <span class="s1">&#39;r&#39;</span><span class="p">:</span>
+            <span class="n">a</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">theta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="n">qi</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">joint_type</span> <span class="o">==</span> <span class="s1">&#39;p&#39;</span><span class="p">:</span>
+            <span class="n">a</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">theta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">qi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">theta</span>
+        
+        <span class="n">c_theta</span> <span class="o">=</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">s_theta</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">c_alpha</span> <span class="o">=</span> <span class="n">cos</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+        <span class="n">s_alpha</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+        <span class="n">T</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">array</span><span class="p">([</span><span class="n">c_theta</span><span class="p">,</span>
+                         <span class="o">-</span><span class="n">s_theta</span> <span class="o">*</span> <span class="n">c_alpha</span><span class="p">,</span>
+                         <span class="n">s_theta</span> <span class="o">*</span> <span class="n">s_alpha</span><span class="p">,</span>
+                         <span class="n">a</span> <span class="o">*</span> <span class="n">c_theta</span><span class="p">])</span> 
+        <span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">array</span><span class="p">([</span><span class="n">s_theta</span><span class="p">,</span>
+                         <span class="n">c_theta</span> <span class="o">*</span> <span class="n">c_alpha</span><span class="p">,</span>
+                         <span class="o">-</span><span class="n">c_theta</span> <span class="o">*</span> <span class="n">s_alpha</span><span class="p">,</span>
+                         <span class="n">a</span> <span class="o">*</span> <span class="n">s_theta</span><span class="p">])</span>
+        <span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">array</span><span class="p">([</span><span class="n">s_alpha</span><span class="p">,</span> <span class="n">c_alpha</span><span class="p">,</span> <span class="n">d</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">T</span></div>
+    
+<div class="viewcode-block" id="Link.plot"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Link.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">tf</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwarg</span><span class="p">):</span>
+        <span class="n">tf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tf_shape</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">tf</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwarg</span><span class="p">)</span></div></div>
+    
+
+<div class="viewcode-block" id="Tool"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Tool">[docs]</a><span class="k">class</span> <span class="nc">Tool</span><span class="p">(</span><span class="n">Collection</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Group tool shapes and pose</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shapes</span><span class="p">,</span> <span class="n">tf_shapes</span><span class="p">,</span> <span class="n">tf_tool_tip</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        rel_tf is the pose of the tool compared to the robot end-effector</span>
+<span class="sd">        pose. (Last link)</span>
+<span class="sd">        tf_tool_tip given relative to rel_tf, saved relative to robot</span>
+<span class="sd">        end effector frame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">shapes</span><span class="p">,</span> <span class="n">tf_shapes</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tf_tt</span> <span class="o">=</span> <span class="n">tf_tool_tip</span></div>
+
+<div class="viewcode-block" id="Robot"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot">[docs]</a><span class="k">class</span> <span class="nc">Robot</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; Robot kinematics and shape</span>
+<span class="sd">    </span>
+<span class="sd">    (inital joint values not implemented)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">links</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="n">links</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndof</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+        
+        <span class="c1"># set default joint limits</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_joint_limits</span><span class="p">([</span><span class="n">JointLimit</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">ndof</span><span class="p">)</span>
+        
+        <span class="c1"># default base position</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape_base</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="c1"># no tool by default</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="c1"># self collision matrix</span>
+        <span class="c1"># default: do not check neighbours</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ndof</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndof</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;bool&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collision_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tril</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">k</span><span class="o">=-</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">triu</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="c1">#self.collision_matrix = np.zeros((self.ndof, self.ndof), dtype=&#39;bool&#39;)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">do_check_self_collision</span> <span class="o">=</span> <span class="kc">True</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">tf_tool</span> <span class="o">=</span> <span class="kc">None</span>
+
+    
+<div class="viewcode-block" id="Robot.set_joint_limits"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.set_joint_limits">[docs]</a>    <span class="k">def</span> <span class="nf">set_joint_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">joint_limits</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joint_limits</span> <span class="o">=</span> <span class="n">joint_limits</span></div>
+    
+<div class="viewcode-block" id="Robot.set_base_tf"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.set_base_tf">[docs]</a>    <span class="k">def</span> <span class="nf">set_base_tf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tf</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span> <span class="o">=</span> <span class="n">tf</span></div>
+    
+<div class="viewcode-block" id="Robot.set_base_shape"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.set_base_shape">[docs]</a>    <span class="k">def</span> <span class="nf">set_base_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">tf</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape_base</span> <span class="o">=</span> <span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape_base_tf</span> <span class="o">=</span> <span class="n">tf</span></div>
+    
+<div class="viewcode-block" id="Robot.set_tool"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.set_tool">[docs]</a>    <span class="k">def</span> <span class="nf">set_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tool</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="o">=</span> <span class="n">tool</span></div>
+    
+<div class="viewcode-block" id="Robot.fk"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.fk">[docs]</a>    <span class="k">def</span> <span class="nf">fk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return end effector frame, either last link, or tool frame</span>
+<span class="sd">        if tool available</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndof</span><span class="p">):</span>
+            <span class="n">Ti</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_link_relative_transform</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">Ti</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">tf_tt</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">tf_tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tf_tool</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">T</span></div>
+    
+<div class="viewcode-block" id="Robot.fk_all_links"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.fk_all_links">[docs]</a>    <span class="k">def</span> <span class="nf">fk_all_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return link frames (not base or tool)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tf_links</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndof</span><span class="p">):</span>
+            <span class="n">Ti</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_link_relative_transform</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">Ti</span><span class="p">)</span>
+            <span class="n">tf_links</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">tf_links</span></div>
+    
+<div class="viewcode-block" id="Robot.get_shapes"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.get_shapes">[docs]</a>    <span class="k">def</span> <span class="nf">get_shapes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+        <span class="n">tfs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fk_all_links</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+        <span class="n">shapes</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="o">.</span><span class="n">shape</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shapes</span><span class="p">)):</span>
+            <span class="n">shapes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_transform</span><span class="p">(</span><span class="n">tfs</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        
+        <span class="c1"># add shapes of tool if present</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">shapes</span> <span class="o">=</span> <span class="n">shapes</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">get_shapes</span><span class="p">(</span><span class="n">tf</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">shapes</span></div>
+    
+<div class="viewcode-block" id="Robot.check_self_collision"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.check_self_collision">[docs]</a>    <span class="k">def</span> <span class="nf">check_self_collision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="c1"># assume shapes are up to date with the required</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndof</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndof</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">collision_matrix</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">is_in_collision</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+                        <span class="k">return</span> <span class="kc">True</span>
+        
+        <span class="c1"># check for collision between tool and robot links</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndof</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndof</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">is_in_collision</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+                        <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="Robot.is_in_collision"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.is_in_collision">[docs]</a>    <span class="k">def</span> <span class="nf">is_in_collision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">scene</span><span class="p">):</span>
+        <span class="c1"># collision between robot and scene</span>
+        <span class="n">s_robot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_shapes</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+        <span class="n">s_scene</span>  <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">get_shapes</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">sr</span> <span class="ow">in</span> <span class="n">s_robot</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">s_scene</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">sr</span><span class="o">.</span><span class="n">is_in_collision</span><span class="p">(</span><span class="n">ss</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="kc">True</span>
+        
+        <span class="c1"># check self-collision if required</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">do_check_self_collision</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_self_collision</span><span class="p">(</span><span class="n">s_robot</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+    
+<div class="viewcode-block" id="Robot.plot"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwarg</span><span class="p">):</span>
+        <span class="c1"># plot base if shape exist</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_base_tf</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shape_base</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">tf</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwarg</span><span class="p">)</span>
+        
+        <span class="c1"># plot robot linkss</span>
+        <span class="n">tf_links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fk_all_links</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">link</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">):</span>
+            <span class="n">link</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">tf_links</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwarg</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">tf</span><span class="o">=</span><span class="n">tf_links</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwarg</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Robot.plot_kinematics"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.plot_kinematics">[docs]</a>    <span class="k">def</span> <span class="nf">plot_kinematics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwarg</span><span class="p">):</span>
+        <span class="c1"># base frame (0)</span>
+        <span class="n">plot_reference_frame</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span><span class="p">)</span>
+        
+        <span class="c1"># link frames (1-ndof)</span>
+        <span class="n">tf_links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fk_all_links</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">tf</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">tf</span> <span class="ow">in</span> <span class="n">tf_links</span><span class="p">]</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">points</span><span class="p">))</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">],</span> <span class="s1">&#39;o-&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">tfi</span> <span class="ow">in</span> <span class="n">tf_links</span><span class="p">:</span>
+            <span class="n">plot_reference_frame</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">tfi</span><span class="p">)</span>
+            
+        <span class="c1"># tool tip frame</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tf_tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tf_links</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">tf_tt</span><span class="p">)</span>
+            <span class="n">plot_reference_frame</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">tf_tt</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Robot.plot_path"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.plot_path">[docs]</a>    <span class="k">def</span> <span class="nf">plot_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">joint_space_path</span><span class="p">):</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">joint_space_path</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">qi</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">joint_space_path</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">qi</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">alpha</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span></div>
+    
+<div class="viewcode-block" id="Robot.animate_path"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Robot.animate_path">[docs]</a>    <span class="k">def</span> <span class="nf">animate_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">joint_space_path</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">get_emtpy_lines</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">:</span>
+                <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">get_empty_lines</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">s</span><span class="p">:</span>
+                    <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">get_empty_lines</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)))</span>
+            <span class="k">return</span> <span class="n">lines</span>
+        
+        <span class="k">def</span> <span class="nf">update_lines</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">q_path</span><span class="p">,</span> <span class="n">lines</span><span class="p">):</span>
+            <span class="n">tfs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fk_all_links</span><span class="p">(</span><span class="n">q_path</span><span class="p">[</span><span class="n">frame</span><span class="p">])</span>
+            <span class="n">N_links</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_links</span><span class="p">):</span>
+                <span class="n">Ti</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tfs</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tf_shape</span><span class="p">)</span>
+                <span class="n">lines</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">update_lines</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">Ti</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">N_s</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">s</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">N_links</span><span class="p">,</span> <span class="n">N_links</span> <span class="o">+</span> <span class="n">N_s</span><span class="p">),</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_s</span><span class="p">)):</span>
+                    <span class="n">tf_j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tfs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">tf_s</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                    <span class="n">lines</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">update_lines</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">tf_j</span><span class="p">)</span>
+        
+        <span class="n">l</span> <span class="o">=</span> <span class="n">get_emtpy_lines</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">joint_space_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">animation</span> <span class="o">=</span> <span class="n">animation</span><span class="o">.</span><span class="n">FuncAnimation</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">update_lines</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span>
+                                           <span class="n">fargs</span><span class="o">=</span><span class="p">(</span><span class="n">joint_space_path</span><span class="p">,</span> <span class="n">l</span><span class="p">),</span>
+                                           <span class="n">interval</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">blit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="PlanarArm"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.PlanarArm">[docs]</a><span class="k">class</span> <span class="nc">PlanarArm</span><span class="p">(</span><span class="n">Robot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Robot defined on page 69 in book Siciliano &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a1</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">a2</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">a3</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="n">a1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="n">a2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="n">a3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))]</span>
+                <span class="p">)</span></div>
+
+<div class="viewcode-block" id="SphericalArm"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.SphericalArm">[docs]</a><span class="k">class</span> <span class="nc">SphericalArm</span><span class="p">(</span><span class="n">Robot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Robot defined on page 72 in book Siciliano &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d2</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span> <span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">d2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span> <span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))]</span>
+                <span class="p">)</span></div>
+
+<div class="viewcode-block" id="SphericalWrist"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.SphericalWrist">[docs]</a><span class="k">class</span> <span class="nc">SphericalWrist</span><span class="p">(</span><span class="n">Robot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Robot defined on page 75 in book Siciliano &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d3</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="n">d3</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))]</span>
+                <span class="p">)</span>
+    
+<div class="viewcode-block" id="SphericalWrist.ik"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.SphericalWrist.ik">[docs]</a>    <span class="k">def</span> <span class="nf">ik</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; TODO add base frame correction</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Rbase</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">Ree</span> <span class="o">=</span> <span class="n">T</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">Ree_rel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Rbase</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span> <span class="n">Ree</span><span class="p">)</span>
+        <span class="c1"># ignore position</span>
+        <span class="c1"># n s a according to convention Siciliano</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">Ree_rel</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">Ree_rel</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">Ree_rel</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+        
+        <span class="n">A</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># solution with theta2 in (0, pi)</span>
+        <span class="n">t1_1</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">t2_1</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">t3_1</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="o">-</span><span class="n">n</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="c1"># solution with theta2 in (-pi, 0)</span>
+        <span class="n">t1_2</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="o">-</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">t2_2</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="o">-</span><span class="n">A</span><span class="p">,</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">t3_2</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="o">-</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">n</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        
+        <span class="n">qsol</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">t1_1</span><span class="p">,</span> <span class="n">t2_1</span><span class="p">,</span> <span class="n">t3_1</span><span class="p">],</span>
+                         <span class="p">[</span><span class="n">t1_2</span><span class="p">,</span> <span class="n">t2_2</span><span class="p">,</span> <span class="n">t3_2</span><span class="p">]])</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="s1">&#39;sol&#39;</span><span class="p">:</span> <span class="n">qsol</span><span class="p">}</span></div></div>
+
+<div class="viewcode-block" id="AnthropomorphicArm"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.AnthropomorphicArm">[docs]</a><span class="k">class</span> <span class="nc">AnthropomorphicArm</span><span class="p">(</span><span class="n">Robot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Robot defined on page 73 in book Siciliano &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a2</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">a3</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span> <span class="p">,</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a2</span><span class="p">,</span> <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="n">a2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a3</span><span class="p">,</span> <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="n">a3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))]</span>
+                <span class="p">)</span>
+    
+<div class="viewcode-block" id="AnthropomorphicArm.ik"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.AnthropomorphicArm.ik">[docs]</a>    <span class="k">def</span> <span class="nf">ik</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+        <span class="c1"># ignore orientation</span>
+        <span class="n">px</span><span class="p">,</span> <span class="n">py</span><span class="p">,</span> <span class="n">pz</span> <span class="o">=</span> <span class="n">T</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">T</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+        <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">l3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">a</span>
+        <span class="n">tol</span> <span class="o">=</span> <span class="mf">1e-6</span>
+        <span class="n">Lps</span> <span class="o">=</span> <span class="n">px</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">py</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">pz</span><span class="o">**</span><span class="mi">2</span>
+        
+        <span class="c1"># Theta 3</span>
+        <span class="c1"># =======    </span>
+        <span class="n">c3</span> <span class="o">=</span> <span class="p">(</span><span class="n">Lps</span> <span class="o">-</span> <span class="n">l2</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">l3</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">l2</span><span class="o">*</span><span class="n">l3</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">c3</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tol</span><span class="p">)</span> <span class="ow">or</span> <span class="n">c3</span> <span class="o">&lt;</span> <span class="o">-</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tol</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="n">c3</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)</span> <span class="ow">or</span> <span class="n">c3</span> <span class="o">&lt;</span> <span class="o">-</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">tol</span><span class="p">):</span>
+            <span class="c1"># almost 1 or -1 =&gt; fix it</span>
+            <span class="n">c3</span> <span class="o">=</span> <span class="n">sign</span><span class="p">(</span><span class="n">c3</span><span class="p">)</span>
+        
+        <span class="c1"># point should be reachable</span>
+        <span class="c1"># TODO just use arccos</span>
+        <span class="n">s3</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">c3</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">t3_1</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span> <span class="n">s3</span><span class="p">,</span> <span class="n">c3</span><span class="p">)</span>
+        <span class="n">t3_2</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="o">-</span><span class="n">s3</span><span class="p">,</span> <span class="n">c3</span><span class="p">)</span>
+        
+        <span class="c1"># Theta 2</span>
+        <span class="c1"># =======</span>
+        <span class="n">Lxy</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">px</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">py</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># TODO must be greater than zero (numerical error?)</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">l2</span> <span class="o">+</span> <span class="n">l3</span> <span class="o">*</span> <span class="n">c3</span> <span class="c1"># often used expression</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="n">l3</span> <span class="o">*</span> <span class="n">s3</span>
+        <span class="c1"># positive sign for s3</span>
+        <span class="n">t2_1</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span>
+        <span class="n">pz</span> <span class="o">*</span> <span class="n">A</span> <span class="o">-</span> <span class="n">Lxy</span> <span class="o">*</span> <span class="n">B</span><span class="p">,</span>
+        <span class="n">Lxy</span> <span class="o">*</span> <span class="n">A</span> <span class="o">+</span> <span class="n">pz</span> <span class="o">*</span> <span class="n">B</span>
+        <span class="p">)</span>
+        <span class="n">t2_2</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span>
+        <span class="n">pz</span> <span class="o">*</span> <span class="n">A</span> <span class="o">+</span> <span class="n">Lxy</span> <span class="o">*</span> <span class="n">B</span><span class="p">,</span>
+        <span class="o">-</span><span class="n">Lxy</span> <span class="o">*</span> <span class="n">A</span> <span class="o">+</span> <span class="n">pz</span> <span class="o">*</span> <span class="n">B</span>
+        <span class="p">)</span>
+        <span class="c1"># negative sign for s3</span>
+        <span class="n">t2_3</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span>
+        <span class="n">pz</span> <span class="o">*</span> <span class="n">A</span> <span class="o">+</span> <span class="n">Lxy</span> <span class="o">*</span> <span class="n">B</span><span class="p">,</span>
+        <span class="n">Lxy</span> <span class="o">*</span> <span class="n">A</span> <span class="o">-</span> <span class="n">pz</span> <span class="o">*</span> <span class="n">B</span>
+        <span class="p">)</span>
+        <span class="n">t2_4</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span>
+        <span class="n">pz</span> <span class="o">*</span> <span class="n">A</span> <span class="o">-</span> <span class="n">Lxy</span> <span class="o">*</span> <span class="n">B</span><span class="p">,</span>
+        <span class="o">-</span><span class="n">Lxy</span> <span class="o">*</span> <span class="n">A</span> <span class="o">-</span> <span class="n">pz</span> <span class="o">*</span> <span class="n">B</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Theta 1</span>
+        <span class="c1"># =======</span>
+        <span class="n">t1_1</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">py</span><span class="p">,</span> <span class="n">px</span><span class="p">)</span>
+        <span class="n">t1_2</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="o">-</span><span class="n">py</span><span class="p">,</span> <span class="o">-</span><span class="n">px</span><span class="p">)</span>
+        
+        <span class="c1"># 4 solutions</span>
+        <span class="c1"># =========</span>
+        <span class="n">q_sol</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="n">t1_1</span><span class="p">,</span> <span class="n">t2_1</span><span class="p">,</span> <span class="n">t3_1</span><span class="p">],</span>
+        <span class="p">[</span><span class="n">t1_1</span><span class="p">,</span> <span class="n">t2_3</span><span class="p">,</span> <span class="n">t3_2</span><span class="p">],</span>
+        <span class="p">[</span><span class="n">t1_2</span><span class="p">,</span> <span class="n">t2_2</span><span class="p">,</span> <span class="n">t3_1</span><span class="p">],</span>
+        <span class="p">[</span><span class="n">t1_2</span><span class="p">,</span> <span class="n">t2_4</span><span class="p">,</span> <span class="n">t3_2</span><span class="p">]</span>
+        <span class="p">]</span>
+        
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;sol&#39;</span><span class="p">:</span> <span class="n">q_sol</span><span class="p">}</span></div></div>
+
+<div class="viewcode-block" id="Arm2"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Arm2">[docs]</a><span class="k">class</span> <span class="nc">Arm2</span><span class="p">(</span><span class="n">Robot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Articulated arm with first link length is NOT zeros</span>
+<span class="sd">    In addition the last frame is rotated to get the Z axis pointing out</span>
+<span class="sd">    along the hypothetical 4 joint when adding a wrist&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a1</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">a2</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">a3</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a1</span><span class="p">,</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="n">a1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a2</span><span class="p">,</span> <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="n">a2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a3</span><span class="p">,</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="n">a3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))]</span>
+                <span class="p">)</span>
+    
+<div class="viewcode-block" id="Arm2.ik"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Arm2.ik">[docs]</a>    <span class="k">def</span> <span class="nf">ik</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+        <span class="c1"># compensate for tool frame</span>
+        <span class="c1">#    if self.tf_tool is not None:</span>
+        <span class="c1">#        print(&#39;Arm2: adapt for tool&#39;)</span>
+        <span class="c1">#        print(T)</span>
+        <span class="c1">#        Tw = np.dot(T, tf_inverse(self.tf_tool))</span>
+        <span class="c1">#        p = Tw[:3, 3]</span>
+        <span class="c1">#        print(Tw)</span>
+        <span class="c1">#    else:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">T</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+        <span class="c1"># ignore orientation</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">a1</span><span class="p">,</span> <span class="n">a2</span><span class="p">,</span> <span class="n">a3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">a</span>
+        <span class="n">tol</span> <span class="o">=</span> <span class="mf">1e-6</span>
+        <span class="n">reachable_pos</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">reachable_neg</span> <span class="o">=</span> <span class="kc">True</span>
+        
+        <span class="c1"># Theta 1</span>
+        <span class="c1"># =======</span>
+        <span class="n">q1_pos</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+        <span class="n">q1_neg</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="o">-</span><span class="n">y</span><span class="p">,</span> <span class="o">-</span><span class="n">x</span><span class="p">)</span>
+        
+        <span class="c1"># Theta 3</span>
+        <span class="c1"># =======    </span>
+        <span class="c1"># q3 two options, elbow up and elbow down</span>
+        <span class="c1"># return solutions between in interval (-pi, pi)</span>
+        <span class="n">den</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">a2</span><span class="o">*</span><span class="n">a3</span>
+        <span class="n">num</span> <span class="o">=</span> <span class="n">a1</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">a2</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">a3</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span>
+        
+        <span class="n">c1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">q1_pos</span><span class="p">);</span> <span class="n">s1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">q1_pos</span><span class="p">)</span>
+        <span class="n">c3</span> <span class="o">=</span> <span class="p">(</span><span class="n">num</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">a1</span><span class="o">*</span><span class="n">s1</span><span class="o">*</span><span class="n">y</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">a1</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">c1</span> <span class="p">)</span> <span class="o">/</span> <span class="n">den</span>
+        
+        <span class="k">if</span> <span class="n">c3</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tol</span><span class="p">)</span> <span class="ow">or</span> <span class="n">c3</span> <span class="o">&lt;</span> <span class="o">-</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tol</span><span class="p">):</span>
+            <span class="n">reachable_pos</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">c3</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)</span> <span class="ow">or</span> <span class="n">c3</span> <span class="o">&lt;</span> <span class="o">-</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">tol</span><span class="p">):</span>
+                <span class="c1"># almost 1 or -1 =&gt; fix it</span>
+                <span class="n">c3</span> <span class="o">=</span> <span class="n">sign</span><span class="p">(</span><span class="n">c3</span><span class="p">)</span>
+            
+            <span class="n">s3</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">c3</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">q3_pos_a</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span> <span class="n">s3</span><span class="p">,</span> <span class="n">c3</span><span class="p">)</span>
+            <span class="n">q3_pos_b</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="o">-</span><span class="n">s3</span><span class="p">,</span> <span class="n">c3</span><span class="p">)</span>
+        
+        <span class="n">c1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">q1_neg</span><span class="p">);</span> <span class="n">s1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">q1_neg</span><span class="p">)</span>
+        <span class="n">c3</span> <span class="o">=</span> <span class="p">(</span><span class="n">num</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">a1</span><span class="o">*</span><span class="n">s1</span><span class="o">*</span><span class="n">y</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">a1</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">c1</span> <span class="p">)</span> <span class="o">/</span> <span class="n">den</span>
+        
+        <span class="k">if</span> <span class="n">c3</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tol</span><span class="p">)</span> <span class="ow">or</span> <span class="n">c3</span> <span class="o">&lt;</span> <span class="o">-</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tol</span><span class="p">):</span>
+            <span class="n">reachable_neg</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>     
+            <span class="k">if</span> <span class="n">c3</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)</span> <span class="ow">or</span> <span class="n">c3</span> <span class="o">&lt;</span> <span class="o">-</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">tol</span><span class="p">):</span>
+                <span class="c1"># almost 1 or -1 =&gt; fix it</span>
+                <span class="n">c3</span> <span class="o">=</span> <span class="n">sign</span><span class="p">(</span><span class="n">c3</span><span class="p">)</span>
+            <span class="c1">#q3_a =  np.arccos(c3)</span>
+            <span class="c1">#q3_b = -q3_a</span>
+            <span class="n">s3</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">c3</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">q3_neg_a</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span> <span class="n">s3</span><span class="p">,</span> <span class="n">c3</span><span class="p">)</span>
+            <span class="n">q3_neg_b</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="o">-</span><span class="n">s3</span><span class="p">,</span> <span class="n">c3</span><span class="p">)</span>
+        
+        <span class="c1"># Theta 2</span>
+        <span class="c1"># =======</span>
+        <span class="k">if</span> <span class="n">reachable_pos</span><span class="p">:</span>
+            <span class="n">s3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">q3_pos_a</span><span class="p">)</span>
+            <span class="n">c3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">q3_pos_b</span><span class="p">)</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            
+            <span class="n">q2_pos_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">((</span><span class="o">-</span><span class="n">a3</span><span class="o">*</span><span class="n">s3</span><span class="o">*</span><span class="p">(</span><span class="n">L</span> <span class="o">-</span> <span class="n">a1</span><span class="p">)</span> <span class="o">+</span> <span class="n">z</span><span class="o">*</span><span class="p">(</span><span class="n">a2</span> <span class="o">+</span> <span class="n">a3</span><span class="o">*</span><span class="n">c3</span><span class="p">)),</span>
+                                  <span class="p">(</span> <span class="n">a3</span><span class="o">*</span><span class="n">s3</span><span class="o">*</span><span class="n">z</span> <span class="o">+</span> <span class="p">(</span><span class="n">L</span> <span class="o">-</span> <span class="n">a1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">a2</span> <span class="o">+</span> <span class="n">a3</span><span class="o">*</span><span class="n">c3</span><span class="p">)))</span>
+            <span class="n">q2_pos_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">((</span> <span class="n">a3</span><span class="o">*</span><span class="n">s3</span><span class="o">*</span><span class="p">(</span><span class="n">L</span> <span class="o">-</span> <span class="n">a1</span><span class="p">)</span> <span class="o">+</span> <span class="n">z</span><span class="o">*</span><span class="p">(</span><span class="n">a2</span> <span class="o">+</span> <span class="n">a3</span><span class="o">*</span><span class="n">c3</span><span class="p">)),</span>
+                                  <span class="p">(</span><span class="o">-</span><span class="n">a3</span><span class="o">*</span><span class="n">s3</span><span class="o">*</span><span class="n">z</span> <span class="o">+</span> <span class="p">(</span><span class="n">L</span> <span class="o">-</span> <span class="n">a1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">a2</span> <span class="o">+</span> <span class="n">a3</span><span class="o">*</span><span class="n">c3</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">reachable_neg</span><span class="p">:</span>
+            <span class="n">s3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">q3_neg_a</span><span class="p">)</span>
+            <span class="n">c3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">q3_neg_b</span><span class="p">)</span>
+            <span class="n">q2_neg_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">((</span> <span class="n">a3</span><span class="o">*</span><span class="n">s3</span><span class="o">*</span><span class="p">(</span><span class="n">L</span> <span class="o">+</span> <span class="n">a1</span><span class="p">)</span> <span class="o">+</span> <span class="n">z</span><span class="o">*</span><span class="p">(</span><span class="n">a2</span> <span class="o">+</span> <span class="n">a3</span><span class="o">*</span><span class="n">c3</span><span class="p">)),</span>
+                                  <span class="p">(</span> <span class="n">a3</span><span class="o">*</span><span class="n">s3</span><span class="o">*</span><span class="n">z</span> <span class="o">-</span> <span class="p">(</span><span class="n">L</span> <span class="o">+</span> <span class="n">a1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">a2</span> <span class="o">+</span> <span class="n">a3</span><span class="o">*</span><span class="n">c3</span><span class="p">)))</span>
+            <span class="n">q2_neg_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">((</span><span class="o">-</span><span class="n">a3</span><span class="o">*</span><span class="n">s3</span><span class="o">*</span><span class="p">(</span><span class="n">L</span> <span class="o">+</span> <span class="n">a1</span><span class="p">)</span> <span class="o">+</span> <span class="n">z</span><span class="o">*</span><span class="p">(</span><span class="n">a2</span> <span class="o">+</span> <span class="n">a3</span><span class="o">*</span><span class="n">c3</span><span class="p">)),</span>
+                                  <span class="p">(</span><span class="o">-</span><span class="n">a3</span><span class="o">*</span><span class="n">s3</span><span class="o">*</span><span class="n">z</span> <span class="o">-</span> <span class="p">(</span><span class="n">L</span> <span class="o">+</span> <span class="n">a1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">a2</span> <span class="o">+</span> <span class="n">a3</span><span class="o">*</span><span class="n">c3</span><span class="p">)))</span>
+        <span class="c1">#q2_neg_a = -q2_neg_a</span>
+        <span class="c1">#q2_neg_b = -q2_neg_b</span>
+        
+        <span class="c1"># 4 solutions</span>
+        <span class="c1"># =========</span>
+<span class="c1">#        q_sol = [[q1_pos, q2_pos_a, q3_a],</span>
+<span class="c1">#                 [q1_pos, q2_pos_b, q3_b]]</span>
+        <span class="n">q_sol</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">reachable_pos</span><span class="p">:</span>
+            <span class="n">q_sol</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">q1_pos</span><span class="p">,</span> <span class="n">q2_pos_a</span><span class="p">,</span> <span class="n">q3_pos_a</span><span class="p">])</span>
+            <span class="n">q_sol</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">q1_pos</span><span class="p">,</span> <span class="n">q2_pos_b</span><span class="p">,</span> <span class="n">q3_pos_b</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">reachable_neg</span><span class="p">:</span>
+            <span class="n">q_sol</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">q1_neg</span><span class="p">,</span> <span class="n">q2_neg_a</span><span class="p">,</span> <span class="n">q3_neg_a</span><span class="p">])</span>
+            <span class="n">q_sol</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">q1_neg</span><span class="p">,</span> <span class="n">q2_neg_b</span><span class="p">,</span> <span class="n">q3_neg_b</span><span class="p">])</span>
+        
+        <span class="k">if</span> <span class="n">reachable_pos</span> <span class="ow">or</span> <span class="n">reachable_neg</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;sol&#39;</span><span class="p">:</span> <span class="n">q_sol</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span></div></div>
+
+<div class="viewcode-block" id="Kuka"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Kuka">[docs]</a><span class="k">class</span> <span class="nc">Kuka</span><span class="p">(</span><span class="n">Robot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Robot combining AnthropomorphicArm and SphericalWrist</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a1</span><span class="o">=</span><span class="mf">0.18</span><span class="p">,</span> <span class="n">a2</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">d4</span><span class="o">=</span><span class="mf">0.62</span><span class="p">,</span> <span class="n">d6</span><span class="o">=</span><span class="mf">0.115</span><span class="p">):</span>
+        <span class="c1"># define kuka collision shapes</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">[</span><span class="n">Shape</span><span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+           <span class="n">Shape</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+           <span class="n">Shape</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
+           <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+           <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.085</span><span class="p">),</span>
+           <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">)]</span>
+        <span class="c1"># define transforms for collision shapes</span>
+        <span class="n">tfs</span> <span class="o">=</span> <span class="p">[</span><span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.09</span><span class="p">,</span> <span class="mi">0</span>  <span class="p">,</span>  <span class="mf">0.05</span><span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.3</span> <span class="p">,</span> <span class="mi">0</span>  <span class="p">,</span> <span class="o">-</span><span class="mf">0.05</span><span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span>  <span class="mf">0.17</span><span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mf">0.1</span> <span class="p">,</span>  <span class="mi">0</span>   <span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span>  <span class="p">,</span>  <span class="mf">0.085</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span>  <span class="p">,</span> <span class="o">-</span><span class="mf">0.03</span><span class="o">/</span><span class="mi">2</span><span class="p">)]</span>
+        
+        <span class="c1"># create robot</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a1</span><span class="p">,</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a2</span><span class="p">,</span> <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">d4</span><span class="p">,</span>  <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">4</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="n">d6</span><span class="p">,</span>  <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">5</span><span class="p">])]</span>
+                <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arm</span> <span class="o">=</span> <span class="n">Arm2</span><span class="p">(</span><span class="n">a1</span><span class="o">=</span><span class="n">a1</span><span class="p">,</span> <span class="n">a2</span><span class="o">=</span><span class="n">a2</span><span class="p">,</span> <span class="n">a3</span><span class="o">=</span><span class="n">d4</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wrist</span> <span class="o">=</span> <span class="n">SphericalWrist</span><span class="p">(</span><span class="n">d3</span><span class="o">=</span><span class="n">d6</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="Kuka.ik"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Kuka.ik">[docs]</a>    <span class="k">def</span> <span class="nf">ik</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+        <span class="c1"># copy transform to change it without affecting the T given</span>
+        <span class="n">Tw</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># compensate for base</span>
+        <span class="n">Tw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tf_inverse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span><span class="p">),</span> <span class="n">Tw</span><span class="p">)</span>
+        <span class="c1"># compensate for tool frame</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Kuka: adjusting for tool&#39;</span><span class="p">)</span>
+            <span class="n">Tw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Tw</span><span class="p">,</span> <span class="n">tf_inverse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">tf_tt</span><span class="p">))</span>
+        <span class="c1"># compensate for d6, last link length</span>
+        <span class="n">d6</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">dh</span><span class="o">.</span><span class="n">d</span>
+        <span class="n">v6</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Tw</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">d6</span><span class="p">]))</span>
+        <span class="n">Tw</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">Tw</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">v6</span>
+        <span class="n">sol_arm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arm</span><span class="o">.</span><span class="n">ik</span><span class="p">(</span><span class="n">Tw</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sol_arm</span><span class="p">[</span><span class="s1">&#39;success&#39;</span><span class="p">]:</span>
+            <span class="n">solutions</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">q_arm</span> <span class="ow">in</span> <span class="n">sol_arm</span><span class="p">[</span><span class="s1">&#39;sol&#39;</span><span class="p">]:</span>
+                <span class="n">q_arm</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_arm</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span>
+                <span class="n">base_wrist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+                <span class="c1"># get orientation from arm fk</span>
+                <span class="n">base_wrist</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arm</span><span class="o">.</span><span class="n">fk</span><span class="p">(</span><span class="n">q_arm</span><span class="p">)[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+                <span class="c1"># position from given T (not used actually)</span>
+                <span class="n">base_wrist</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">Tw</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">wrist</span><span class="o">.</span><span class="n">set_base_tf</span><span class="p">(</span><span class="n">base_wrist</span><span class="p">)</span>
+                <span class="n">sol_wrist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wrist</span><span class="o">.</span><span class="n">ik</span><span class="p">(</span><span class="n">Tw</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">sol_wrist</span><span class="p">[</span><span class="s1">&#39;success&#39;</span><span class="p">]:</span>
+                    <span class="k">for</span> <span class="n">q_wrist</span> <span class="ow">in</span> <span class="n">sol_wrist</span><span class="p">[</span><span class="s1">&#39;sol&#39;</span><span class="p">]:</span>
+                        <span class="n">solutions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">q_arm</span><span class="p">,</span> <span class="n">q_wrist</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">solutions</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;sol&#39;</span><span class="p">:</span> <span class="n">solutions</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span></div></div>
+
+<div class="viewcode-block" id="KukaOnRail"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.KukaOnRail">[docs]</a><span class="k">class</span> <span class="nc">KukaOnRail</span><span class="p">(</span><span class="n">Robot</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a1</span><span class="o">=</span><span class="mf">0.18</span><span class="p">,</span> <span class="n">a2</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">d4</span><span class="o">=</span><span class="mf">0.62</span><span class="p">,</span> <span class="n">d6</span><span class="o">=</span><span class="mf">0.115</span><span class="p">):</span>        
+        <span class="n">s</span>  <span class="o">=</span> <span class="p">[</span><span class="n">Shape</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+               <span class="n">Shape</span><span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+               <span class="n">Shape</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+               <span class="n">Shape</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
+               <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+               <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.085</span><span class="p">),</span>
+               <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">)]</span>
+        
+        <span class="n">tfs</span> <span class="o">=</span> <span class="p">[</span><span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span>  <span class="p">,</span>  <span class="o">-</span><span class="mf">0.15</span><span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.09</span><span class="p">,</span> <span class="mi">0</span>  <span class="p">,</span>  <span class="mf">0.05</span><span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.3</span> <span class="p">,</span> <span class="mi">0</span>  <span class="p">,</span> <span class="o">-</span><span class="mf">0.05</span><span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span>  <span class="mf">0.17</span><span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mf">0.1</span> <span class="p">,</span>  <span class="mi">0</span>   <span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span>  <span class="p">,</span>  <span class="mf">0.085</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span>
+               <span class="n">pose_x</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span>  <span class="p">,</span> <span class="o">-</span><span class="mf">0.03</span><span class="o">/</span><span class="mi">2</span><span class="p">)]</span>
+        <span class="c1"># create robot</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span> <span class="p">,</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a1</span><span class="p">,</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a2</span><span class="p">,</span> <span class="mi">0</span>   <span class="p">,</span> <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">d4</span><span class="p">,</span>  <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">4</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="n">d6</span><span class="p">,</span>  <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">tf_shape</span><span class="o">=</span><span class="n">tfs</span><span class="p">[</span><span class="mi">6</span><span class="p">])]</span>
+                <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kuka</span> <span class="o">=</span> <span class="n">Kuka</span><span class="p">(</span><span class="n">a1</span><span class="o">=</span><span class="mf">0.18</span><span class="p">,</span> <span class="n">a2</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">d4</span><span class="o">=</span><span class="mf">0.62</span><span class="p">,</span> <span class="n">d6</span><span class="o">=</span><span class="mf">0.115</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="KukaOnRail.ik"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.KukaOnRail.ik">[docs]</a>    <span class="k">def</span> <span class="nf">ik</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">q_fixed</span><span class="p">):</span>
+        <span class="c1"># copy transform to change it without affecting the T given</span>
+        <span class="n">Tw</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># compensate for base</span>
+        <span class="n">Tw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tf_inverse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tf_base</span><span class="p">),</span> <span class="n">Tw</span><span class="p">)</span>
+        <span class="c1"># compensate for tool frame</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1">#print(&#39;Kuka: adjusting for tool&#39;)</span>
+            <span class="n">Tw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Tw</span><span class="p">,</span> <span class="n">tf_inverse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tool</span><span class="o">.</span><span class="n">tf_tt</span><span class="p">))</span>
+        
+        <span class="c1"># change base of helper robot according to fixed joint</span>
+        <span class="n">T1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_link_relative_transform</span><span class="p">(</span><span class="n">q_fixed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kuka</span><span class="o">.</span><span class="n">set_base_tf</span><span class="p">(</span><span class="n">T1</span><span class="p">)</span>
+        
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kuka</span><span class="o">.</span><span class="n">ik</span><span class="p">(</span><span class="n">Tw</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">res</span><span class="p">[</span><span class="s1">&#39;success&#39;</span><span class="p">]:</span>
+            <span class="n">q_sol</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">qi</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s1">&#39;sol&#39;</span><span class="p">]:</span>
+                <span class="n">q_sol</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">q_fixed</span><span class="p">,</span> <span class="n">qi</span><span class="p">)))</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;sol&#39;</span><span class="p">:</span> <span class="n">q_sol</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span></div></div>
+
+<div class="viewcode-block" id="Puma"><a class="viewcode-back" href="../../api_doc.html#acrobotics.robot.Puma">[docs]</a><span class="k">class</span> <span class="nc">Puma</span><span class="p">(</span><span class="n">Robot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Puma parameters from https://github.com/uw-biorobotics/IKBT</span>
+<span class="sd">    </span>
+<span class="sd">    Note that I use the convention of Siciliano for the a index for</span>
+<span class="sd">    a3 and a4</span>
+
+<span class="sd">    ik code was in the old version, but the code was from someone else</span>
+<span class="sd">    and I did not use it. TODO add link here.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a3</span><span class="o">=</span><span class="mf">0.432</span><span class="p">,</span> <span class="n">a4</span><span class="o">=</span><span class="mf">0.0203</span><span class="p">,</span> <span class="n">d1</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">d3</span><span class="o">=</span><span class="mf">0.1245</span><span class="p">,</span> <span class="n">d4</span><span class="o">=</span><span class="mf">0.432</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span> <span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="n">d1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span> <span class="p">,</span> <span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span> <span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a3</span><span class="p">,</span>  <span class="mi">0</span>   <span class="p">,</span> <span class="n">d3</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="n">a4</span><span class="p">,</span> <span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">d4</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span> <span class="p">,</span> <span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span> <span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)),</span>
+                 <span class="n">Link</span><span class="p">(</span><span class="n">DHLink</span><span class="p">(</span><span class="mi">0</span> <span class="p">,</span>  <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span> <span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">Shape</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))]</span>
+                <span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">acrobotics</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">API documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api_doc.html">API Acro Robotics package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Jeroen De Maeyer.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
