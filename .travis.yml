@@ -1,10 +1,9 @@
 language: python
 
 # sudo false implies containerized builds
-sudo: false
+sudo: required
 
 python:
-  - 3.5
   - 3.6
 
 env:
@@ -18,7 +17,7 @@ env:
 
 before_install:
 # Here we download miniconda and install the dependencies
-- apt install swig
+- sudo apt install swig
 - export MINICONDA=$HOME/miniconda
 - export PATH="$MINICONDA/bin:$PATH"
 - hash -r
