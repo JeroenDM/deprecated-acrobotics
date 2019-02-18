@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from acrobotics.util import get_default_axes3d
-from acrobotics.robot import Kuka
+from acrobotics.recources.robots import Kuka
 from acrobotics.path import FreeOrientationPt
 from acrobotics.geometry import Shape, Collection
 
