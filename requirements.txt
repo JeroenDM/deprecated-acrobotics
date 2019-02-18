@@ -3,3 +3,4 @@ matplotlib
 pyquaternion
 pytest
 pytest-cov
+codecov
