@@ -10,6 +10,7 @@ addons:
   apt:
     packages:
     - swig
+    - libeigen3-dev
 
 env:
   global:
