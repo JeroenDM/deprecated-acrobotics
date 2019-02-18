@@ -5,6 +5,11 @@ sudo: required
 
 python:
   - 3.6
+ 
+addons:
+  apt:
+    packages:
+    - swig
 
 env:
   global:
@@ -17,7 +22,6 @@ env:
 
 before_install:
 # Here we download miniconda and install the dependencies
-- sudo apt install swig
 - export MINICONDA=$HOME/miniconda
 - export PATH="$MINICONDA/bin:$PATH"
 - hash -r
