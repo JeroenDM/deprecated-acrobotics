@@ -1,6 +1,7 @@
 numpy
 matplotlib
 pyquaternion
+python-fcl
 pytest
 pytest-cov
 codecov

@@ -39,8 +39,9 @@ qp_sol = res['path']
 
 
 #%% ANIMATE
-
+import matplotlib.pyplot as plt
 fig2, ax2 = get_default_axes3d([-1, 1], [-1, 1], [-1, 1])
 for pi in path: pi.plot(ax2)
 scene.plot(ax2, c='g')
 robot.animate_path(fig2, ax2, qp_sol)
+plt.show(block=True)
