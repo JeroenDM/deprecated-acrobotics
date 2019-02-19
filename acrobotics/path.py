@@ -68,15 +68,20 @@ class TolerancedNumber:
         """
         if nominal < lower_bound or nominal > upper_bound:
             raise ValueError("nominal value must respect the bounds")
-        self.n = nominal
-        self.u = upper_bound
-        self.l = lower_bound
-        self.s = samples
-        self.range = np.linspace(self.l, self.u, self.s)
+        self.nominal = nominal
+        self.upper = upper_bound
+        self.lower = lower_bound
+        self._num_samples = samples
+        self.range = np.linspace(self.lower, self.upper, samples)
 
-    def set_samples(self, samples):
-        self.s = samples
-        self.range = np.linspace(self.l, self.u, self.s)
+    @property
+    def num_samples(self):
+        return self._num_samples
+
+    @num_samples.setter
+    def num_samples(self, samples):
+        self._num_samples = samples
+        self.range = np.linspace(self.lower, self.upper, samples)
 
 
 class TrajectoryPt:
@@ -145,7 +150,7 @@ class TrajectoryPt:
         p_nominal = []
         for i in range(self.dim):
             if self.hasTolerance[i]:
-                p_nominal.append(self.p[i].n)
+                p_nominal.append(self.p[i].nominal)
             else:
                 p_nominal.append(self.p[i])
         self.p_nominal = np.array(p_nominal)
@@ -221,7 +226,7 @@ class TrajectoryPt:
         cnt = 0
         for i, val in enumerate(self.p):
             if self.hasTolerance[i]:
-                samples.append(r[:, cnt] * (val.u - val.l) + val.l)
+                samples.append(r[:, cnt] * (val.upper - val.lower) + val.lower)
                 cnt += 1
             else:
                 samples.append(np.ones(n) * val)
