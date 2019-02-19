@@ -6,16 +6,16 @@ Module for sampling based motion planning for path following.
 import numpy as np
 from .cpp.graph import Graph
 from .path import point_to_frame
-from .util import HaltonSampler
+
 
 def cart_to_joint_simple(robot, path, scene, q_fixed):
     """ cartesian path to joint solutions
-    
+
     q_fixed argument provides an already sampled version
     for the redundant joints.
     The path tolerance is sampled by tp.discretise inside
     the TrajectoryPoint class.
-    
+
     Return array with float32 elements, reducing data size.
     During graph search c++ floats are used, also float32.
     """
@@ -37,14 +37,15 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
             Q.append([])
     return Q
 
+
 def cart_to_joint_no_redundancy(robot, path, scene):
     """ cartesian path to joint solutions
-    
+
     q_fixed argument provides an already sampled version
     for the redundant joints.
     The path tolerance is sampled by tp.discretise inside
     the TrajectoryPoint class.
-    
+
     Return array with float32 elements, reducing data size.
     During graph search c++ floats are used, also float32.
     """
@@ -58,37 +59,38 @@ def cart_to_joint_no_redundancy(robot, path, scene):
                 for qi in sol['sol']:
                     if not robot.is_in_collision(qi, scene):
                         q_sol.append(qi)
-        
+
         if len(q_sol) > 0:
             Q.append(np.vstack(q_sol).astype('float32'))
         else:
             Q.append([])
     return Q
 
+
 def get_shortest_path(Q, method='bfs'):
     """ Calculate the shortest path from joint space data
-    
+
     When the path with trajectory points is converted to joint space,
     this data can be used to construct a graph and look for the shortest path.
     The current distance metrix is the l1-norm of joint position difference
     between two points.
-    
+
     I still have to implement maximum joint movement and acceleration limits.
     So technically this will always find a shortest path for now.
-    
+
     Parameters
     ----------
     Q : list of nympy.ndarrays of float
         A list with the possible joint positions for every trajectory point
         along a path.
-    
+
     Returns
     -------
     dict
         A dictionary with a key 'success' to indicate whether a path was found.
         If success is True, then the key 'path' contains a list with the joint
         position for every trajectory point that gives the shortest path.
-    
+
     Notes
     -----
     I have a problem with swig type conversions. Therefore the type of the
@@ -112,8 +114,8 @@ def get_shortest_path(Q, method='bfs'):
     elif method == 'dijkstra':
         g.run_dijkstra()
     else:
-        raise NotImplementedError("The method " + method + " is not implented yet.")
-
+        raise NotImplementedError(
+            'The method {} is not implented yet.'.format(method))
     # print result
     # g.print_graph()
     g.print_path()
@@ -130,20 +132,21 @@ def get_shortest_path(Q, method='bfs'):
             # TODO ugly all the "unsave" typecasting
             qki = Q[k][i].astype('float64')
             res.append(qki)
-        
+
         return {'success': True, 'path': res, 'length': cost}
+
 
 def _check_dtype(Q):
     """ Change type if necessary to float32
-    
+
     Due to an unresolved issue with swig and numpy, I have to convert the type.
-    
+
     Parameters
     ----------
     Q : list of nympy.ndarrays of float
         A list with the possible joint positions for every trajectory point
         along a path.
-    
+
     Returns
     -------
     list of nympy.ndarrays of float32
@@ -152,5 +155,5 @@ def _check_dtype(Q):
         print("converting type of Q")
         for i in range(len(Q)):
             Q[i] = Q[i].astype('float32')
-    
+
     return Q

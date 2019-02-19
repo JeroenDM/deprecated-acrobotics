@@ -5,6 +5,7 @@ from ..util import pose_x, tf_inverse
 
 pi = np.pi
 
+
 class PlanarArm(Robot):
     """ Robot defined on page 69 in book Siciliano """
     def __init__(self, a1=1, a2=1, a3=1):
@@ -14,6 +15,7 @@ class PlanarArm(Robot):
                  Link(DHLink(a3, 0, 0, 0), 'r', Shape(a3, 0.1, 0.1))]
                 )
 
+
 class SphericalArm(Robot):
     """ Robot defined on page 72 in book Siciliano """
     def __init__(self, d2=1):
@@ -22,6 +24,7 @@ class SphericalArm(Robot):
                  Link(DHLink(0,  pi/2, d2, 0), 'r', Shape(1, 0.1, 0.1)),
                  Link(DHLink(0,  0   , 0 , 0), 'p', Shape(1, 0.1, 0.1))]
                 )
+
 
 class SphericalWrist(Robot):
     """ Robot defined on page 75 in book Siciliano """
@@ -59,6 +62,7 @@ class SphericalWrist(Robot):
         return {'success': True,
                 'sol': qsol}
 
+
 class AnthropomorphicArm(Robot):
     """ Robot defined on page 73 in book Siciliano """
     def __init__(self, a2=1, a3=1):
@@ -71,7 +75,7 @@ class AnthropomorphicArm(Robot):
     def ik(self, T):
         # ignore orientation
         px, py, pz = T[0, 3], T[1, 3], T[2, 3]
-        l1, l2, l3 = self.links[0].dh.a, self.links[1].dh.a, self.links[2].dh.a
+        l2, l3 = self.links[1].dh.a, self.links[2].dh.a
         tol = 1e-6
         Lps = px**2 + py**2 + pz**2
 
@@ -83,19 +87,19 @@ class AnthropomorphicArm(Robot):
             return {'success': False}
         elif c3 > (1 - tol) or c3 < -(1 - tol):
             # almost 1 or -1 => fix it
-            c3 = sign(c3)
+            c3 = np.sign(c3)
 
         # point should be reachable
         # TODO just use arccos
         s3 = np.sqrt(1 - c3**2)
 
-        t3_1 = np.arctan2( s3, c3)
-        t3_2 = np.arctan2(-s3, c3)
+        t3_1, t3_2 = np.arctan2(s3, c3), np.arctan2(-s3, c3)
 
         # Theta 2
         # =======
-        Lxy = np.sqrt(px**2 + py**2) # TODO must be greater than zero (numerical error?)
-        A = l2 + l3 * c3 # often used expression
+        # TODO must be greater than zero (numerical error?)
+        Lxy = np.sqrt(px**2 + py**2)
+        A = l2 + l3 * c3  # often used expression
         B = l3 * s3
         # positive sign for s3
         t2_1 = np.arctan2(
@@ -131,6 +135,7 @@ class AnthropomorphicArm(Robot):
         ]
 
         return {'success': True, 'sol': q_sol}
+
 
 class Arm2(Robot):
     """ Articulated arm with first link length is NOT zeros
@@ -172,8 +177,8 @@ class Arm2(Robot):
         den = 2*a2*a3
         num = a1**2 - a2**2 - a3**2 + x**2 + y**2 + z**2
 
-        c1 = np.cos(q1_pos); s1 = np.sin(q1_pos)
-        c3 = (num - 2*a1*s1*y - 2*a1*x*c1 ) / den
+        c1, s1 = np.cos(q1_pos), np.sin(q1_pos)
+        c3 = (num - 2*a1*s1*y - 2*a1*x*c1) / den
 
         if c3 > (1 + tol) or c3 < -(1 + tol):
             reachable_pos = False
@@ -183,11 +188,11 @@ class Arm2(Robot):
                 c3 = np.sign(c3)
 
             s3 = np.sqrt(1 - c3**2)
-            q3_pos_a = np.arctan2( s3, c3)
+            q3_pos_a = np.arctan2(s3, c3)
             q3_pos_b = np.arctan2(-s3, c3)
 
-        c1 = np.cos(q1_neg); s1 = np.sin(q1_neg)
-        c3 = (num - 2*a1*s1*y - 2*a1*x*c1 ) / den
+        c1, s1 = np.cos(q1_neg), np.sin(q1_neg)
+        c3 = (num - 2*a1*s1*y - 2*a1*x*c1) / den
 
         if c3 > (1 + tol) or c3 < -(1 + tol):
             reachable_neg = False
@@ -195,17 +200,14 @@ class Arm2(Robot):
             if c3 > (1 - tol) or c3 < -(1 - tol):
                 # almost 1 or -1 => fix it
                 c3 = np.sign(c3)
-            #q3_a =  np.arccos(c3)
-            #q3_b = -q3_a
+
             s3 = np.sqrt(1 - c3**2)
-            q3_neg_a = np.arctan2( s3, c3)
-            q3_neg_b = np.arctan2(-s3, c3)
+            q3_neg_a, q3_neg_b = np.arctan2(s3, c3), np.arctan2(-s3, c3)
 
         # Theta 2
         # =======
         if reachable_pos:
-            s3 = np.sin(q3_pos_a)
-            c3 = np.cos(q3_pos_b)
+            c3, s3 = np.cos(q3_pos_b), np.sin(q3_pos_a)
             L = np.sqrt(x**2 + y**2)
 
             q2_pos_a = np.arctan2((-a3*s3*(L - a1) + z*(a2 + a3*c3)),
@@ -219,8 +221,8 @@ class Arm2(Robot):
                                   ( a3*s3*z - (L + a1)*(a2 + a3*c3)))
             q2_neg_b = np.arctan2((-a3*s3*(L + a1) + z*(a2 + a3*c3)),
                                   (-a3*s3*z - (L + a1)*(a2 + a3*c3)))
-        #q2_neg_a = -q2_neg_a
-        #q2_neg_b = -q2_neg_b
+        # q2_neg_a = -q2_neg_a
+        # q2_neg_b = -q2_neg_b
 
         # 4 solutions
         # =========
@@ -239,17 +241,18 @@ class Arm2(Robot):
         else:
             return {'success': False}
 
+
 class Kuka(Robot):
     """ Robot combining AnthropomorphicArm and SphericalWrist
     """
     def __init__(self, a1=0.18, a2=0.6, d4=0.62, d6=0.115):
         # define kuka collision shapes
         s = [Shape(0.3, 0.2, 0.1),
-           Shape(0.8, 0.2, 0.1),
-           Shape(0.2, 0.1, 0.5),
-           Shape(0.1, 0.2, 0.1),
-           Shape(0.1, 0.1, 0.085),
-           Shape(0.1, 0.1, 0.03)]
+             Shape(0.8, 0.2, 0.1),
+             Shape(0.2, 0.1, 0.5),
+             Shape(0.1, 0.2, 0.1),
+             Shape(0.1, 0.1, 0.085),
+             Shape(0.1, 0.1, 0.03)]
         # define transforms for collision shapes
         tfs = [pose_x(0, -0.09, 0  ,  0.05),
                pose_x(0, -0.3 , 0  , -0.05),
@@ -302,23 +305,24 @@ class Kuka(Robot):
                 return {'success': True, 'sol': solutions}
         return {'success': False}
 
+
 class KukaOnRail(Robot):
     def __init__(self, a1=0.18, a2=0.6, d4=0.62, d6=0.115):
-        s  = [Shape(0.2, 0.2, 0.1),
-               Shape(0.3, 0.2, 0.1),
-               Shape(0.8, 0.2, 0.1),
-               Shape(0.2, 0.1, 0.5),
-               Shape(0.1, 0.2, 0.1),
-               Shape(0.1, 0.1, 0.085),
-               Shape(0.1, 0.1, 0.03)]
+        s = [Shape(0.2, 0.2, 0.1),
+             Shape(0.3, 0.2, 0.1),
+             Shape(0.8, 0.2, 0.1),
+             Shape(0.2, 0.1, 0.5),
+             Shape(0.1, 0.2, 0.1),
+             Shape(0.1, 0.1, 0.085),
+             Shape(0.1, 0.1, 0.03)]
 
-        tfs = [pose_x(0,  0   , 0  ,  -0.15),
-               pose_x(0, -0.09, 0  ,  0.05),
-               pose_x(0, -0.3 , 0  , -0.05),
+        tfs = [pose_x(0,  0   , 0   ,  -0.15),
+               pose_x(0, -0.09, 0   ,  0.05),
+               pose_x(0, -0.3 , 0   , -0.05),
                pose_x(0,  0   , 0.05,  0.17),
-               pose_x(0,  0   , 0.1 ,  0   ),
-               pose_x(0,  0   , 0  ,  0.085/2),
-               pose_x(0,  0   , 0  , -0.03/2)]
+               pose_x(0,  0   , 0.1 ,  0),
+               pose_x(0,  0   , 0   ,  0.085/2),
+               pose_x(0,  0   , 0   , -0.03/2)]
         # create robot
         super().__init__(
                 [Link(DHLink(0 , pi/2, 0,   0), 'p', s[0], tf_shape=tfs[0]),
@@ -338,7 +342,6 @@ class KukaOnRail(Robot):
         Tw = np.dot(tf_inverse(self.tf_base), Tw)
         # compensate for tool frame
         if self.tool is not None:
-            #print('Kuka: adjusting for tool')
             Tw = np.dot(Tw, tf_inverse(self.tool.tf_tt))
 
         # change base of helper robot according to fixed joint
@@ -354,6 +357,7 @@ class KukaOnRail(Robot):
         else:
             return {'success': False}
 
+
 class Puma(Robot):
     """ Puma parameters from https://github.com/uw-biorobotics/IKBT
 
@@ -363,6 +367,7 @@ class Puma(Robot):
     ik code was in the old version, but the code was from someone else
     and I did not use it. TODO add link here.
     """
+
     def __init__(self, a3=0.432, a4=0.0203, d1=0.6, d3=0.1245, d4=0.432):
         super().__init__(
                 [Link(DHLink(0 ,  0   , d1, 0), 'r', Shape(0.1, 0.1, 0.1)),

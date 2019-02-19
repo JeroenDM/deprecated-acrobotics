@@ -1,9 +1,11 @@
 import numpy as np
 import fcl
 
+
 def tf_apply(tf, vector):
     """ Transform a vector with a homogeneous transform matrix tf. """
     return np.dot(tf[:3, :3], vector) + tf[:3, 3]
+
 
 class Shape:
     """ Wrapper class for fcl collision objects
@@ -30,29 +32,29 @@ class Shape:
         v[2] = tf_apply(self.tf, [-a, -b,  c])
         v[3] = tf_apply(self.tf, [-a, -b, -c])
 
-        v[4] = tf_apply(self.tf, [ a,  b,  c])
-        v[5] = tf_apply(self.tf, [ a,  b, -c])
-        v[6] = tf_apply(self.tf, [ a, -b,  c])
-        v[7] = tf_apply(self.tf, [ a, -b, -c])
+        v[4] = tf_apply(self.tf, [a,  b,  c])
+        v[5] = tf_apply(self.tf, [a,  b, -c])
+        v[6] = tf_apply(self.tf, [a, -b,  c])
+        v[7] = tf_apply(self.tf, [a, -b, -c])
         return v
 
     def get_edges(self):
         v = self.get_vertices()
         e = np.zeros((12, 6))
-        e[0] = np.hstack((v[0], v[1]));
-        e[1] = np.hstack((v[1], v[3]));
-        e[2] = np.hstack((v[3], v[2]));
-        e[3] = np.hstack((v[2], v[0]));
+        e[0] = np.hstack((v[0], v[1]))
+        e[1] = np.hstack((v[1], v[3]))
+        e[2] = np.hstack((v[3], v[2]))
+        e[3] = np.hstack((v[2], v[0]))
 
-        e[4] = np.hstack((v[0], v[4]));
-        e[5] = np.hstack((v[1], v[5]));
-        e[6] = np.hstack((v[3], v[7]));
-        e[7] = np.hstack((v[2], v[6]));
+        e[4] = np.hstack((v[0], v[4]))
+        e[5] = np.hstack((v[1], v[5]))
+        e[6] = np.hstack((v[3], v[7]))
+        e[7] = np.hstack((v[2], v[6]))
 
-        e[8] =  np.hstack((v[4], v[5]));
-        e[9] =  np.hstack((v[5], v[7]));
-        e[10] = np.hstack((v[7], v[6]));
-        e[11] = np.hstack((v[6], v[4]));
+        e[8] = np.hstack((v[4], v[5]))
+        e[9] = np.hstack((v[5], v[7]))
+        e[10] = np.hstack((v[7], v[6]))
+        e[11] = np.hstack((v[6], v[4]))
         return e
 
     def get_normals(self):
@@ -94,7 +96,7 @@ class Shape:
         return [ax.plot([], [], '-', *arg, **kwarg)[0] for i in range(12)]
 
     def update_lines(self, lines, tf):
-        """ Update existing lines on a plot using the given transform tf as Box position"""
+        """ Update existing lines on a plot using the given transform tf"""
         self.set_transform(tf)
         edges = self.get_edges()
         for i, l in enumerate(lines):
@@ -119,13 +121,14 @@ class Shape:
             l.set_3d_properties(z)
         return lines
 
+
 class Collection:
     """ shapes and there transforms in one class
     """
+
     def __init__(self, shapes, tf_shapes):
         self.s = shapes
         self.tf_s = tf_shapes
-        #self.t = tf_shapes
         for shape, tf in zip(self.s, tf_shapes):
             shape.set_transform(tf)
 

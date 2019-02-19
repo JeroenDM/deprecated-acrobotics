@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Fri May 18 19:06:36 2018
-
-@author: jeroen
-
+Define a simplified model of a welding torch.
 """
 import numpy as np
 from ..geometry import Shape
@@ -12,17 +8,17 @@ from ..util import get_default_axes3d, plot_reference_frame
 from ..util import rot_x, rot_y, rot_z
 from ..robot import Tool
 
-#==============================================================================
+# ==============================================================================
 # Dimensions
-#==============================================================================
-angle1 = 11.3 * np.pi / 180 # torch relative to base rotation
-angle2 = -31.5 * np.pi / 180 # torch tip angle
+# ==============================================================================
+angle1 = 11.3 * np.pi / 180   # torch relative to base rotation
+angle2 = -31.5 * np.pi / 180  # torch tip angle
 
 pos_data = np.array([[0.035, 0    , 0],
                      [-0.02, 0.15 , 0],
                      [0.085, 0.075, 0],
                      [0.15 , 0.15 , 0],
-                     [0.25 , 0.15 + np.sin(angle2)*0.05, 0]])
+                     [0.25 , 0.15 + np.sin(angle2) * 0.05, 0]])
 
 s = [Shape(0.08, 0.08 , 0.08 ),
      Shape(0.18, 0.075, 0.075),
@@ -30,11 +26,11 @@ s = [Shape(0.08, 0.08 , 0.08 ),
      Shape(0.10, 0.025, 0.025),
      Shape(0.10, 0.025, 0.025)]
 
-#==============================================================================
+# ==============================================================================
 # Create shape transforms relative to tool base
-#==============================================================================
-tf1 = np.eye(4); tf2 = np.eye(4); tf3 = np.eye(4); tf4 = np.eye(4)
-tf5 = np.eye(4); tool_tip = np.eye(4)
+# ==============================================================================
+tf1, tf2, tf3, tf4, tf5 = np.eye(4), np.eye(4), np.eye(4), np.eye(4), np.eye(4)
+tool_tip = np.eye(4)
 
 # translaten relative to first shape
 tf1[:3, 3] = pos_data[0]
@@ -57,14 +53,14 @@ tf5 = np.dot(tf_rotate, tf5)
 tool_tip = np.dot(tf_rotate, tool_tip)
 
 # point z-axis out of tool tip
-tool_tip[:3, :3] = np.dot(tool_tip[:3, :3] , rot_y(np.pi/2))
+tool_tip[:3, :3] = np.dot(tool_tip[:3, :3], rot_y(np.pi/2))
 
 
 tfs = [tf1, tf2, tf3, tf4, tf5]
 
-#==============================================================================
+# ==============================================================================
 # Create tool and plot result
-#==============================================================================
+# ==============================================================================
 tf_tool = np.eye(4)
 tf_tool[:3, :3] = np.dot(rot_y(-np.pi / 2), rot_x(-np.pi/2))
 
@@ -78,7 +74,7 @@ if __name__ == '__main__':
     fig, ax = get_default_axes3d([-0.10, 0.20], [0, 0.30], [-0.15, 0.15])
     plot_reference_frame(ax, tf_tool)
     torch.plot(ax, tf=np.eye(4), c='k')
-    
+
     for tf in torch.tf_s:
         plot_reference_frame(ax, tf)
     plot_reference_frame(ax, torch.tf_tt)

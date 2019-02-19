@@ -6,18 +6,19 @@ Inverse kinematics are implemented for specific robots
 """
 
 import numpy as np
-from numpy import cos, sin, array, pi, sqrt, arctan2, sign
 from collections import namedtuple
 from matplotlib import animation
-from .geometry import Shape, Collection
-from .util import tf_inverse, pose_x, plot_reference_frame
+from .geometry import Collection
+from .util import plot_reference_frame
 
 # use named tuples to make data more readable
 JointLimit = namedtuple('JointLimit', ['lower', 'upper'])
 DHLink = namedtuple('DHLink', ['a', 'alpha', 'd', 'theta'])
 
+
 class Link:
     """ Robot link according to the Denavit-Hartenberg convention. """
+
     def __init__(self, dh_parameters, joint_type, shape, tf_shape=None):
         self.dh = dh_parameters
         self.shape = shape
@@ -26,7 +27,7 @@ class Link:
             # default value
             self.tf_shape = np.eye(4)
             # move back along x-axis
-            #self.tf_rel[0, 3] = -self.dh.a
+            # self.tf_rel[0, 3] = -self.dh.a
         else:
             self.tf_shape = tf_shape
 
@@ -41,20 +42,20 @@ class Link:
         if self.joint_type == 'p':
             a, alpha, d, theta = self.dh.a, self.dh.alpha, qi, self.dh.theta
 
-        c_theta = cos(theta)
-        s_theta = sin(theta)
-        c_alpha = cos(alpha)
-        s_alpha = sin(alpha)
+        c_theta = np.cos(theta)
+        s_theta = np.sin(theta)
+        c_alpha = np.cos(alpha)
+        s_alpha = np.sin(alpha)
         T = np.eye(4)
-        T[0, :] = array([c_theta,
-                         -s_theta * c_alpha,
-                         s_theta * s_alpha,
-                         a * c_theta])
-        T[1, :] = array([s_theta,
-                         c_theta * c_alpha,
-                         -c_theta * s_alpha,
-                         a * s_theta])
-        T[2, 1:] = array([s_alpha, c_alpha, d])
+        T[0, :] = np.array([c_theta,
+                            -s_theta * c_alpha,
+                            s_theta * s_alpha,
+                            a * c_theta])
+        T[1, :] = np.array([s_theta,
+                            c_theta * c_alpha,
+                            -c_theta * s_alpha,
+                            a * s_theta])
+        T[2, 1:] = np.array([s_alpha, c_alpha, d])
         return T
 
     def plot(self, ax, tf, *arg, **kwarg):
@@ -65,6 +66,7 @@ class Link:
 class Tool(Collection):
     """ Group tool shapes and pose
     """
+
     def __init__(self, shapes, tf_shapes, tf_tool_tip):
         """
         rel_tf is the pose of the tool compared to the robot end-effector
@@ -75,11 +77,13 @@ class Tool(Collection):
         super().__init__(shapes, tf_shapes)
         self.tf_tt = tf_tool_tip
 
+
 class Robot:
     """ Robot kinematics and shape
 
     (inital joint values not implemented)
     """
+
     def __init__(self, links):
         self.links = links
         self.ndof = len(links)
@@ -95,14 +99,12 @@ class Robot:
         self.tool = None
 
         # self collision matrix
-        # default: do not check neighbours
+        # default: do not check neighbours, create band structure matrix
         temp = np.ones((self.ndof, self.ndof), dtype='bool')
         self.collision_matrix = np.tril(temp, k=-3) + np.triu(temp, k=3)
-        #self.collision_matrix = np.zeros((self.ndof, self.ndof), dtype='bool')
         self.do_check_self_collision = True
 
         self.tf_tool = None
-
 
     def set_joint_limits(self, joint_limits):
         self.joint_limits = joint_limits
@@ -172,7 +174,7 @@ class Robot:
     def is_in_collision(self, q, scene):
         # collision between robot and scene
         s_robot = self.get_shapes(q)
-        s_scene  = scene.get_shapes()
+        s_scene = scene.get_shapes()
         for sr in s_robot:
             for ss in s_scene:
                 if sr.is_in_collision(ss):
@@ -243,8 +245,8 @@ class Robot:
                     tf_j = np.dot(tfs[-1], self.tool.tf_s[k])
                     lines[j] = self.tool.s[k].update_lines(lines[j], tf_j)
 
-        l = get_emtpy_lines(ax)
+        ls = get_emtpy_lines(ax)
         N = len(joint_space_path)
         self.animation = animation.FuncAnimation(fig, update_lines, N,
-                                           fargs=(joint_space_path, l),
-                                           interval=200, blit=False)
+                                                 fargs=(joint_space_path, ls),
+                                                 interval=200, blit=False)
