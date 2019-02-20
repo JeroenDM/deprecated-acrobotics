@@ -11,7 +11,7 @@ from acrobotics.robot import Robot, DHLink, Link
 from acrobotics.recources.robots import PlanarArm, SphericalArm, AnthropomorphicArm, SphericalWrist, Arm2, Kuka, KukaOnRail
 from acrobotics.geometry import Shape, Collection
 from acrobotics.util import pose_x
-from kuka_forward_kinematics import fk_kuka
+from .kuka_forward_kinematics import fk_kuka
 
 from acrobotics.recources.torch_model import torch
 

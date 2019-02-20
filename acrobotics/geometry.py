@@ -17,6 +17,8 @@ class Shape:
         self.dz = dz
         self.tf = np.eye(4)
         self.fcl_shape = fcl.Box(dx, dy, dz)
+        self.request = fcl.CollisionRequest()
+        self.result = fcl.CollisionResult()
 
     def set_transform(self, new_tf):
         self.tf = new_tf
@@ -73,10 +75,14 @@ class Shape:
         fcl_tf_2 = fcl.Transform(other.tf[:3, :3], other.tf[:3, 3])
         o1 = fcl.CollisionObject(self.fcl_shape, fcl_tf_1)
         o2 = fcl.CollisionObject(other.fcl_shape, fcl_tf_2)
-        request = fcl.CollisionRequest()
-        result = fcl.CollisionResult()
-        result = fcl.collide(o1, o2, request, result)
+        result = fcl.collide(o1, o2, self.request, self.result)
         return result
+
+    def is_in_collision_multi(self, others):
+        for other in others:
+            if self.is_in_collision(other):
+                return True
+        return False
 
     def plot(self, ax, tf, *arg, **kwarg):
         """ Plot a box as lines on a given axes_handle.
@@ -138,6 +144,8 @@ class Collection:
             for i, shape in enumerate(self.s):
                 shape.set_transform(np.dot(tf, self.tf_s[i]))
                 shape.plot_2(ax, *arg, **kwarg)
+                # reset shape transforms for future plots!
+                shape.set_transform(self.tf_s[i])
         else:
             for shape in self.s:
                 shape.plot_2(ax, *arg, **kwarg)

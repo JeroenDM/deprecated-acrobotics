@@ -12,9 +12,10 @@ Collision checking and graph search implemented in C++ and Python interface gene
 
 .. toctree::
    :maxdepth: 1
-   :caption: API documentation:
+   :caption: Table of content:
 
    api_doc.rst
+   geometry_nb.ipynb
 
 Quicklinks
 ----------

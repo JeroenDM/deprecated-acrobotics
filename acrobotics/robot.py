@@ -69,10 +69,7 @@ class Tool(Collection):
 
     def __init__(self, shapes, tf_shapes, tf_tool_tip):
         """
-        rel_tf is the pose of the tool compared to the robot end-effector
-        pose. (Last link)
-        tf_tool_tip given relative to rel_tf, saved relative to robot
-        end effector frame
+        tf_tool_tip relative to last link robot.
         """
         super().__init__(shapes, tf_shapes)
         self.tf_tt = tf_tool_tip
@@ -146,13 +143,12 @@ class Robot:
 
     def get_shapes(self, q):
         tfs = self.fk_all_links(q)
-        shapes = [l.shape for l in self.links]
-        for i in range(len(shapes)):
-            shapes[i].set_transform(tfs[i])
-
-        # add shapes of tool if present
+        shapes = []
+        for tf, link in zip(tfs, self.links):
+            link.shape.set_transform(np.dot(tf, link.tf_shape))
+            shapes.append(link.shape)
         if self.tool is not None:
-            shapes = shapes + self.tool.get_shapes(tf=tfs[-1])
+            shapes.append(self.tool.get_shapes(tf=tfs[-1]))
         return shapes
 
     def check_self_collision(self, s):
