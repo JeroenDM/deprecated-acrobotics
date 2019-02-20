@@ -280,7 +280,6 @@ class Kuka(Robot):
         Tw = np.dot(tf_inverse(self.tf_base), Tw)
         # compensate for tool frame
         if self.tool is not None:
-            print('Kuka: adjusting for tool')
             Tw = np.dot(Tw, tf_inverse(self.tool.tf_tt))
         # compensate for d6, last link length
         d6 = self.links[5].dh.d
