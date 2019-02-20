@@ -2,7 +2,7 @@ API Acro Robotics package
 =========================
 
 The package is organized different modules for different tools,
-mostly based on the division of pysical objects an separat task.
+mostly based on the division of physical objects and tasks.
 
 Utility functions
 -----------------
