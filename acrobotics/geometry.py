@@ -138,6 +138,8 @@ class Collection:
             for i, shape in enumerate(self.s):
                 shape.set_transform(np.dot(tf, self.tf_s[i]))
                 shape.plot_2(ax, *arg, **kwarg)
+                # reset shape transforms for future plots!
+                shape.set_transform(self.tf_s[i])
         else:
             for shape in self.s:
                 shape.plot_2(ax, *arg, **kwarg)
