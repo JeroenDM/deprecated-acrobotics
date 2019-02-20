@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.org/projects/acrobotics/badge/?version=latest)](https://acrobotics.readthedocs.io/en/latest/?badge=latest)
+
 Acrobotics
 ==========
 I want to be able to quickly test motion planning ideas, and Python seems like a great language for rapid prototyping. There are great libraries for robot simulation and related task, but installing them is can be a hassle and very dependent on operating system and python version.
