@@ -1,4 +1,6 @@
-[![Documentation Status](https://readthedocs.org/projects/acrobotics/badge/?version=latest)](https://acrobotics.readthedocs.io/en/latest/?badge=latest)
+.. image:: https://readthedocs.org/projects/acrobotics/badge/?version=latest
+:target: https://acrobotics.readthedocs.io/en/latest/?badge=latest
+:alt: Documentation Status
 
 Acrobotics
 ==========
