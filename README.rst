@@ -1,6 +1,6 @@
 .. image:: https://readthedocs.org/projects/acrobotics/badge/?version=latest
-:target: https://acrobotics.readthedocs.io/en/latest/?badge=latest
-:alt: Documentation Status
+   :target: https://acrobotics.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
 
 Acrobotics
 ==========
