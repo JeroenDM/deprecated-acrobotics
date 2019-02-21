@@ -27,6 +27,13 @@ def rot_z(alfa):
                      [0, 0, 1]])
 
 
+def translation(x, y, z):
+    return np.array([[1, 0, 0, x],
+                     [0, 1, 0, y],
+                     [0, 0, 1, z],
+                     [0, 0, 0, 1]], dtype='float64')
+
+
 def pose_x(alfa, x, y, z):
     """ Homogenous transform with rotation around x-axis and translation. """
     return np.array([[1, 0, 0, x],
