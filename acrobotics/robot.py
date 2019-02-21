@@ -100,6 +100,10 @@ class Robot:
         temp = np.ones((self.ndof, self.ndof), dtype='bool')
         self.collision_matrix = np.tril(temp, k=-3) + np.triu(temp, k=3)
         self.do_check_self_collision = True
+        
+        # keep track of most likly links to be in collision
+        self.collision_priority = list(range(self.ndof))
+
 
     def fk(self, q):
         """ Return end effector frame, either last link, or tool frame
@@ -142,10 +146,13 @@ class Robot:
         # check collision for all links
         geom_links = [l.geometry for l in self.links]
         tf_links = self.fk_all_links(q)
-
-        for tf_link, geom_link in zip(tf_links, geom_links):
-            if geom_link.is_in_collision(collection, tf_self=tf_link):
-                return True
+        
+        for i in self.collision_priority:
+            if geom_links[i].is_in_collision(collection, tf_self=tf_links[i]):
+                # move current index to front of priority list
+                self.collision_priority.remove(i)
+                self.collision_priority.insert(0, i)
+                return True 
 
         # check collision of tool attached to the last link
         if self.tool is not None:
