@@ -27,6 +27,9 @@ class Link:
         self.dh = dh_parameters
         self.joint_type = joint_type
         self.geometry = geometry
+        
+        # save transform object for performance
+        self._T = np.eye(4)
 
     def get_link_relative_transform(self, qi):
         """ transformation matrix from link i relative to i-1
@@ -43,16 +46,14 @@ class Link:
         s_theta = np.sin(theta)
         c_alpha = np.cos(alpha)
         s_alpha = np.sin(alpha)
-        T = np.eye(4)
-        T[0, :] = np.array([c_theta,
-                            -s_theta * c_alpha,
-                            s_theta * s_alpha,
-                            a * c_theta])
-        T[1, :] = np.array([s_theta,
-                            c_theta * c_alpha,
-                            -c_theta * s_alpha,
-                            a * s_theta])
-        T[2, 1:] = np.array([s_alpha, c_alpha, d])
+        T = self._T
+        T[0, 0], T[0, 1] = c_theta, -s_theta * c_alpha
+        T[0, 2], T[0, 3] = s_theta * s_alpha, a * c_theta
+        
+        T[1, 0], T[1, 1] = s_theta, c_theta * c_alpha
+        T[1, 2], T[1, 3] = -c_theta * s_alpha, a * s_theta
+        
+        T[2, 1], T[2, 2], T[2, 3] = s_alpha, c_alpha, d
         return T
 
     def plot(self, ax, tf, *arg, **kwarg):
