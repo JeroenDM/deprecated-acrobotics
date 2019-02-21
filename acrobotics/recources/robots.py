@@ -45,6 +45,9 @@ class SphericalWrist(Robot):
                 [Link(DHLink(0, -pi/2, 0,  0), 'r', geometry[0]),
                  Link(DHLink(0,  pi/2, 0,  0), 'r', geometry[1]),
                  Link(DHLink(0,  0   , d3, 0), 'r', geometry[2])])
+        
+        # cache ik solution array object for performance
+        self.qsol = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
 
     def ik(self, T):
         """ TODO add base frame correction
@@ -68,8 +71,9 @@ class SphericalWrist(Robot):
         t2_2 = np.arctan2(-A, a[2])
         t3_2 = np.arctan2(-s[2], n[2])
 
-        qsol = np.array([[t1_1, t2_1, t3_1],
-                         [t1_2, t2_2, t3_2]])
+        qsol = self.qsol
+        qsol[0, 0], qsol[0, 1], qsol[0, 2] = t1_1, t2_1, t3_1
+        qsol[1, 0], qsol[1, 1], qsol[1, 2] = t1_2, t2_2, t3_2
         return {'success': True,
                 'sol': qsol}
 
