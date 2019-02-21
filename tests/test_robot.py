@@ -127,7 +127,7 @@ class TestForwardKinematics():
 
     def test_Arm2_tool_robot(self):
         bot = Arm2()
-        bot.set_tool(torch)
+        bot.tool = torch
         q_test = self.generate_random_configurations(bot)
         for qi in q_test:
             Tactual = bot.fk(qi)
@@ -145,7 +145,7 @@ class TestForwardKinematics():
 
     def test_Kuka_tool_robot(self):
         bot = Kuka()
-        bot.set_tool(torch)
+        bot.tool = torch
         q_test = self.generate_random_configurations(bot)
         for qi in q_test:
             Tactual = bot.fk(qi)
@@ -155,13 +155,12 @@ class TestForwardKinematics():
 
     def test_Kuka_base_robot(self):
         bot = Kuka()
-        tf_base = pose_x(0.5, 0.1, 0.2, 0.3)
-        bot.set_base_tf(tf_base)
+        bot.tf_base = pose_x(0.5, 0.1, 0.2, 0.3)
         q_test = self.generate_random_configurations(bot)
         for qi in q_test:
             Tactual = bot.fk(qi)
             Tdesired = fk_kuka(qi)
-            Tdesired = dot(tf_base, Tdesired)
+            Tdesired = dot(bot.tf_base, Tdesired)
             assert_almost_equal(Tactual, Tdesired)
 
     def test_Kuka_on_rail_robot(self):
@@ -176,19 +175,18 @@ class TestForwardKinematics():
             assert_almost_equal(Tactual, Tdesired)
 
     def test_PlanarArm_base(self):
-        tf_base = pose_x(1.5, 0.3, 0.5, 1.2)
+        robot1.tf_base = pose_x(1.5, 0.3, 0.5, 1.2)
         q_test = self.generate_random_configurations(robot1)
-        robot1.set_base_tf(tf_base)
         for qi in q_test:
             Tactual = robot1.fk(qi)
             Tdesired = self.fk_PlanarArm(qi, robot1.links)
-            Tdesired = dot(tf_base, Tdesired)
+            Tdesired = dot(robot1.tf_base, Tdesired)
             assert_almost_equal(Tactual, Tdesired)
 
 #    def test_sw_base(self):
-#        tf_base = pose_x(1.5, 0.3, 0.5, 1.2)
+#
 #        bot = SphericalWrist()
-#        bot.set_base_tf(tf_base)
+#        bot.tf_base = pose_x(1.5, 0.3, 0.5, 1.2)
 #        q_test = self.generate_random_configurations(bot)
 #        for qi in q_test:
 #            Tactual = bot.fk(qi)
@@ -196,17 +194,19 @@ class TestForwardKinematics():
 #            Tdesired = dot(tf_base, Tdesired)
 #            assert_almost_equal(Tactual, Tdesired)
 
+
 class TestCollisionChecking():
     def test_kuka_self_collision(self):
         bot = Kuka()
+        gl = [l.geometry for l in bot.links]
         q0 = [0, pi/2, 0, 0, 0, 0]
         q_self_collision = [0, 1.5, -1.3, 0, -1.5, 0]
-        s1 = bot.get_shapes(q0)
-        a1 = bot.check_self_collision(s1)
-        assert a1 == False
-        s2 = bot.get_shapes(q_self_collision)
-        a2 = bot.check_self_collision(s2)
-        assert a2 == True
+        tf1 = bot.fk_all_links(q0)
+        a1 = bot._check_self_collision(tf1, gl)
+        assert(a1 is False)
+        tf2 = bot.fk_all_links(q_self_collision)
+        a2 = bot._check_self_collision(tf2, gl)
+        assert(a2 is True)
 
     def test_kuka_collision(self):
         bot = Kuka()
@@ -216,9 +216,9 @@ class TestCollisionChecking():
         obj2 = Collection([Shape(0.2, 0.3, 0.5), Shape(0.1, 0.3, 0.1)],
                            [pose_x(0, 0.3, -0.7, 0.5), pose_x(0, 0.75, 0.5, 0.5)])
         a1 = bot.is_in_collision(q0, obj1)
-        assert a1 == True
+        assert(a1 is True)
         a2 = bot.is_in_collision(q0, obj2)
-        assert a2 == False
+        assert(a2 is False)
 
 class TestIK():
     def test_aa_random(self):
@@ -245,8 +245,7 @@ class TestIK():
 
     def test_sw_random_other_base(self):
         bot = SphericalWrist()
-        tf_base = pose_x(1.5, 0.3, 0.5, 1.2)
-        bot.set_base_tf(tf_base)
+        bot.tf_base = pose_x(1.5, 0.3, 0.5, 1.2)
         N = 20
         q_rand = rand(N, 3) * 2 * pi - pi
         for qi in q_rand:
@@ -309,7 +308,7 @@ class TestIK():
 
     def test_kuka_tool_random(self):
         bot = Kuka()
-        bot.set_tool(torch)
+        bot.tool = torch
         N = 20
         q_rand = rand(N, 6) * 2 * pi - pi
         for qi in q_rand:
@@ -328,8 +327,7 @@ class TestIK():
 
     def test_kuka_base_random(self):
         bot = Kuka()
-        tf_base = pose_x(0.1, 0.02, 0.01, -0.01)
-        bot.set_base_tf(tf_base)
+        bot.tf_base = pose_x(0.1, 0.02, 0.01, -0.01)
         N = 20
         q_rand = rand(N, 6) * 2 * pi - pi
         for qi in q_rand:
@@ -366,7 +364,7 @@ class TestIK():
 
     def test_kuka_on_rail_tool_random(self):
         bot = KukaOnRail()
-        bot.set_tool(torch)
+        bot.tool = torch
         N = 20
         q_rand = rand(N, 7) * 2 * pi - pi
         for qi in q_rand:

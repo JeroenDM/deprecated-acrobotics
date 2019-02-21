@@ -19,17 +19,14 @@ DHLink = namedtuple('DHLink', ['a', 'alpha', 'd', 'theta'])
 class Link:
     """ Robot link according to the Denavit-Hartenberg convention. """
 
-    def __init__(self, dh_parameters, joint_type, shape, tf_shape=None):
+    def __init__(self, dh_parameters, joint_type, geometry):
+        """ Creates a linkf from Denavit-Hartenberg parameters,
+        a joint type ('r' for revolute, 'p' for prismatic) and
+        a Collection of Shapes representing the geometry.
+        """
         self.dh = dh_parameters
-        self.shape = shape
         self.joint_type = joint_type
-        if tf_shape is None:
-            # default value
-            self.tf_shape = np.eye(4)
-            # move back along x-axis
-            # self.tf_rel[0, 3] = -self.dh.a
-        else:
-            self.tf_shape = tf_shape
+        self.geometry = geometry
 
     def get_link_relative_transform(self, qi):
         """ transformation matrix from link i relative to i-1
@@ -59,12 +56,12 @@ class Link:
         return T
 
     def plot(self, ax, tf, *arg, **kwarg):
-        tf = np.dot(tf, self.tf_shape)
-        self.shape.plot(ax, tf, *arg, **kwarg)
+        self.geometry.plot(ax, tf=tf, *arg, **kwarg)
 
 
 class Tool(Collection):
-    """ Group tool shapes and pose
+    """ Collection with added atribute tool tip transform tf_tt
+     relative to the last link.
     """
 
     def __init__(self, shapes, tf_shapes, tf_tool_tip):
@@ -86,35 +83,22 @@ class Robot:
         self.ndof = len(links)
 
         # set default joint limits
-        self.set_joint_limits([JointLimit(-np.pi, np.pi)]*self.ndof)
+        self.joint_limits = [JointLimit(-np.pi, np.pi)] * self.ndof
 
-        # default base position
-        self.tf_base = np.eye(4)
-        self.shape_base = None
-
-        # no tool by default
+        # defaul has no fixed base geometry, no tool and
+        self.geometry_base = None
         self.tool = None
 
+        # pose of base with respect to the global reference frame
+        # this is independent from the geometry of the base,
+        # for the whole robot
+        self.tf_base = np.eye(4)
+
         # self collision matrix
-        # default: do not check neighbours, create band structure matrix
+        # default: do not check link neighbours, create band structure matrix
         temp = np.ones((self.ndof, self.ndof), dtype='bool')
         self.collision_matrix = np.tril(temp, k=-3) + np.triu(temp, k=3)
         self.do_check_self_collision = True
-
-        self.tf_tool = None
-
-    def set_joint_limits(self, joint_limits):
-        self.joint_limits = joint_limits
-
-    def set_base_tf(self, tf):
-        self.tf_base = tf
-
-    def set_base_shape(self, shape, tf):
-        self.shape_base = shape
-        self.shape_base_tf = tf
-
-    def set_tool(self, tool):
-        self.tool = tool
 
     def fk(self, q):
         """ Return end effector frame, either last link, or tool frame
@@ -126,8 +110,6 @@ class Robot:
             T = np.dot(T, Ti)
         if self.tool is not None:
             T = np.dot(T, self.tool.tf_tt)
-        elif self.tf_tool is not None:
-            T = np.dot(T, self.tf_tool)
         return T
 
     def fk_all_links(self, q):
@@ -141,54 +123,45 @@ class Robot:
             tf_links.append(T)
         return tf_links
 
-    def get_shapes(self, q):
-        tfs = self.fk_all_links(q)
-        shapes = []
-        for tf, link in zip(tfs, self.links):
-            link.shape.set_transform(np.dot(tf, link.tf_shape))
-            shapes.append(link.shape)
-        if self.tool is not None:
-            shapes.append(self.tool.get_shapes(tf=tfs[-1]))
-        return shapes
-
-    def check_self_collision(self, s):
-        # assume shapes are up to date with the required
-        for i in range(self.ndof):
-            for j in range(self.ndof):
+    def _check_self_collision(self, tf_links, geom_links):
+        for i, ti, gi in zip(range(self.ndof), tf_links, geom_links):
+            for j, tj, gj in zip(range(self.ndof), tf_links, geom_links):
                 if self.collision_matrix[i, j]:
-                    if s[i].is_in_collision(s[j]):
-                        return True
-
-        # check for collision between tool and robot links
-        if self.tool is not None:
-            for i in range(self.ndof):
-                for j in range(self.ndof, len(s)):
-                    if s[i].is_in_collision(s[j]):
+                    if gi.is_in_collision(gj, tf_self=ti, tf_other=tj):
                         return True
         return False
 
-    def is_in_collision(self, q, scene):
-        # collision between robot and scene
-        s_robot = self.get_shapes(q)
-        s_scene = scene.get_shapes()
-        for sr in s_robot:
-            for ss in s_scene:
-                if sr.is_in_collision(ss):
+    def is_in_collision(self, q, collection):
+        # check collision of fixed base geometry
+        base = self.geometry_base
+        if base is not None:
+            if base.is_in_collision(collection, tf_self=self.tf_base):
+                return True
+
+        # check collision for all links
+        geom_links = [l.geometry for l in self.links]
+        tf_links = self.fk_all_links(q)
+
+        for tf_link, geom_link in zip(tf_links, geom_links):
+            if geom_link.is_in_collision(collection, tf_self=tf_link):
+                return True
+
+        # check collision of tool attached to the last link
+        if self.tool is not None:
+            tf_tool = tf_links[-1]
+            for tf_link, geom_link in zip(tf_links, geom_links):
+                if geom_link.is_in_collision(self.tool, tf_self=tf_link, tf_other=tf_tool):
                     return True
 
-        # check self-collision if required
         if self.do_check_self_collision:
-            if self.check_self_collision(s_robot):
+            if self._check_self_collision(tf_links, geom_links):
                 return True
         return False
 
     def plot(self, ax, q, *arg, **kwarg):
-        # plot base if shape exist
-        if self.shape_base is not None:
-            tf = np.dot(self.tf_base, self.shape_base_tf)
-            self.shape_base.plot(ax, tf, *arg, **kwarg)
+        if self.geometry_base is not None:
+            self.geometry_base.plot(ax, self.tf_base, *arg, **kwarg)
 
-        # plot robot linkss
         tf_links = self.fk_all_links(q)
         for i, link in enumerate(self.links):
             link.plot(ax, tf_links[i], *arg, **kwarg)
@@ -223,23 +196,27 @@ class Robot:
         def get_emtpy_lines(ax):
             lines = []
             for l in self.links:
-                lines.append(l.shape.get_empty_lines(ax, c=(0.1, 0.2, 0.5)))
+                for s in l.geometry.shapes:
+                    lines.append(s.get_empty_lines(ax, c=(0.1, 0.2, 0.5)))
             if self.tool is not None:
-                for s in self.tool.s:
+                for s in self.tool.shapes:
                     lines.append(s.get_empty_lines(ax, c=(0.1, 0.2, 0.5)))
             return lines
 
         def update_lines(frame, q_path, lines):
             tfs = self.fk_all_links(q_path[frame])
-            N_links = len(self.links)
-            for i in range(N_links):
-                Ti = np.dot(tfs[i], self.links[i].tf_shape)
-                lines[i] = self.links[i].shape.update_lines(lines[i], Ti)
+            cnt = 0
+            for tf_l, l in zip(tfs, self.links):
+                for tf_s, s in zip(l.geometry.tf_s, l.geometry.s):
+                    Ti = np.dot(tf_l, tf_s)
+                    lines[cnt] = s.update_lines(lines[cnt], Ti)
+                    cnt = cnt + 1
+
             if self.tool is not None:
-                N_s = len(self.tool.s)
-                for j, k in zip(range(N_links, N_links + N_s), range(N_s)):
-                    tf_j = np.dot(tfs[-1], self.tool.tf_s[k])
-                    lines[j] = self.tool.s[k].update_lines(lines[j], tf_j)
+                for tf_s, s in zip(self.tool.tf_s, self.tool.s):
+                    tf_j = np.dot(tfs[-1], tf_s)
+                    lines[cnt] = s.update_lines(lines[cnt], tf_j)
+                    cnt = cnt + 1
 
         ls = get_emtpy_lines(ax)
         N = len(joint_space_path)
