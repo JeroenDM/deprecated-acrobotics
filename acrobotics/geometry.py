@@ -139,3 +139,20 @@ class Collection:
     @property
     def shapes(self):
         return self.s
+
+    def is_in_collision(self, other, tf_self=None, tf_other=None):
+        tf_shapes_self = self.tf_s
+        tf_shapes_other = other.tf_s
+
+        # move the collection of shapes if specified
+        if tf_self is not None:
+            tf_shapes_self = [np.dot(tf_self, tf) for tf in tf_shapes_self]
+        if tf_other is not None:
+            tf_shapes_other = [np.dot(tf_other, tf) for tf in tf_shapes_other]
+
+        # check for collision between all those shapes
+        for tf1, shape1 in zip(tf_shapes_self, self.s):
+            for tf2, shape2 in zip(tf_shapes_other, other.s):
+                if shape1.is_in_collision(tf1, shape2, tf2):
+                    return True
+        return False

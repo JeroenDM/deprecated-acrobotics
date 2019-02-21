@@ -14,8 +14,9 @@ Collision checking and graph search implemented in C++ and Python interface gene
    :maxdepth: 1
    :caption: Table of content:
 
-   api_doc.rst
+   robots_and_links.ipynb
    geometry_nb.ipynb
+   api_doc.rst
 
 Quicklinks
 ----------

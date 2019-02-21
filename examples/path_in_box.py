@@ -17,8 +17,8 @@ pi = np.pi
 # robot definition
 bot = KukaOnRail()
 tf_base = np.dot(pose_x(-pi/2, 0, -0.8, 0.5), pose_y(-pi/2, 0, 0, 0))
-bot.set_base_tf(tf_base)
-bot.set_tool(torch)
+bot.tf_base = tf_base
+bot.tool = torch
 q0 = [0, 0, 1.5, 0, 0, 0, 0]
 
 bot.do_check_self_collision = False
@@ -30,6 +30,7 @@ workpiece.plot(ax, c='r')
 for tp in path:
     tf = point_to_frame(tp.p_nominal)
     plot_reference_frame(ax, tf)
+plt.show(block=True)
 
 # plan path
 qf_samples = np.linspace(-0.5, 0.5, 10)
