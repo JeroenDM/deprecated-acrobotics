@@ -37,8 +37,52 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
             Q.append([])
     return Q
 
+class SolutionPoint:
+    """ class to save intermediate solution info for trajectory point
+    """
+    def __init__(self, tp):
+        self.tp_init = tp
+        self.tp_current = tp
+        self.q_best = []
+        self.jl = []
 
-def cart_to_joint_no_redundancy(robot, path, scene):
+        self.samples = None
+        self.joint_solutions = np.array([])
+        self.num_js = 0
+
+
+    def calc_joint_solutions(self, robot, tp_samples, check_collision=False, scene=None):
+        """ Convert a cartesian trajectory point to joint space """
+        # input validation
+        if check_collision:
+            if scene == None:
+                raise ValueError("scene is needed for collision checking")
+
+        # use different joint limits for redundant joints
+        if robot.ndof > 3:
+            # save origanal joint limits
+            orig_jl = robot.jl
+            robot.jl = self.jl
+        
+        #tp_discrete = self.tp_current.discretise()
+        joint_solutions = []
+        for Ti in tp_samples:
+            sol = robot.ik(Ti)
+            if sol['success']:
+                for qsol in sol['q']:
+                    if check_collision:
+                        if not robot.is_in_collision(qsol, scene):
+                            joint_solutions.append(qsol)
+                    else:
+                        joint_solutions.append(qsol)
+
+        if robot.ndof > 3:
+            # reset original joint_limits
+            robot.jl = orig_jl
+
+        return np.array(joint_solutions)
+
+def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
     """ cartesian path to joint solutions
 
     The path tolerance is sampled by tp.discretise inside
@@ -51,7 +95,7 @@ def cart_to_joint_no_redundancy(robot, path, scene):
     for i, tp in enumerate(path):
         print('Processing point ' + str(i) + '/' + str(len(path)))
         q_sol = []
-        for Ti in tp.get_samples(1000, rep='transform'):
+        for Ti in tp.get_samples(num_samples, rep='transform'):
             sol = robot.ik(Ti)
             if sol['success']:
                 for qi in sol['sol']:

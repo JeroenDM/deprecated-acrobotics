@@ -9,7 +9,7 @@ from acrobotics.geometry import Shape, Collection
 robot = Kuka()
 
 path = []
-for s in np.linspace(0, 1, 10):
+for s in np.linspace(0, 1, 8):
     xi = 0.8
     yi = s * 0.2 + (1-s) * (-0.2)
     zi = 0.2
@@ -27,7 +27,7 @@ scene = Collection([floor_plane], [floor_plane_tf])
 from acrobotics.planning import cart_to_joint_no_redundancy
 from acrobotics.planning import get_shortest_path
 
-Q = cart_to_joint_no_redundancy(robot, path, scene)
+Q = cart_to_joint_no_redundancy(robot, path, scene, num_samples=500)
 
 print([len(qi) for qi in Q])
 qp = [qi[0] for qi in Q]
@@ -36,6 +36,13 @@ res = get_shortest_path(Q, method='dijkstra')
 print(res)
 qp_sol = res['path']
 
+#%% RUN for different amount of sampels
+# solutions = []
+# for ns in [100, 200, 500, 1000]:
+#     print('Running planner for ns = {}.'.format(ns))
+#     Q = cart_to_joint_no_redundancy(robot, path, scene, num_samples=ns)
+#     res = get_shortest_path(Q, method='dijkstra')
+#     solutions.append(res)
 
 #%% ANIMATE
 import matplotlib.pyplot as plt
