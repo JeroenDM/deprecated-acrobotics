@@ -4,6 +4,7 @@ hence the TolerancedNumber class.
 """
 
 import numpy as np
+from pyquaternion import Quaternion
 from .util import HaltonSampler, create_grid, rot_x, rot_y, rot_z, sample_SO3
 
 # =============================================================================
@@ -251,6 +252,38 @@ class FreeOrientationPt:
             return np.hstack((pos, rpy))
         if rep == 'transform':
             Ts = np.array(sample_SO3(n=num_samples, rep='transform'))
+            for Ti in Ts:
+                Ti[:3, 3] = self.p
+            return Ts
+
+    def discretise(self):
+        return self.get_samples(100)
+
+    def __str__(self):
+        return str(self.p)
+
+    def plot(self, ax):
+        ax.plot([self.p[0]], [self.p[1]], [self.p[2]], 'o', c='r')
+
+class TolOrientationPt:
+    def __init__(self, position, orientation):
+        self.p = np.array(position)
+        self.o = orientation
+
+    def get_samples(self, num_samples, rep='rpy'):
+        """ Sample orientation, position is fixed for every sample
+        """
+        if rep == 'rpy':
+            rpy = np.array(sample_SO3(n=num_samples, rep='rpy'))
+            pos = np.tile(self.p, (num_samples, 1))
+            return np.hstack((pos, rpy))
+        if rep == 'transform':
+            Ts = []
+            print('sampling near with distance 0.1')
+            for i in range(num_samples):
+                qr = Quaternion.random_near(self.o, 0.2)
+                Ts.append(qr.transformation_matrix)
+            Ts = np.array(Ts)
             for Ti in Ts:
                 Ti[:3, 3] = self.p
             return Ts
