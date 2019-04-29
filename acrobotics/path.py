@@ -14,225 +14,117 @@ from .util import HaltonSampler, create_grid, rot_x, rot_y, rot_z, sample_SO3
 
 class TolerancedNumber:
     """ A range on the numner line used to define path constraints
-
-    It also has a nominal value in the range which can be used in cost
-    functions of some sort in the future. For example, if it is preffered
-    that the robot end-effector stays close to an optimal pose, but can
-    deviate if needed to avoid collision.
-
-    Attributes
-    ----------
-    n : float
-        Nominal / preffered value for this number
-    u : float
-        Upper limit.
-    l : float
-        lower limit
-    s : int
-        Number of samples used to produce descrete version of this number.
-    range : numpy.ndarray of float
-        A sampled version of the range on the number line, including limits.
-        The nominal value is not necessary included.
-
-    Notes
-    -----
-    Sampling for orientation is done uniformly at the moment.
-    In 3D this is no good and special sampling techniques for angles should be
-    used.
-    The sampled range is now an attribute, but memory wise it would be better
-    if it is a method. Then it is only descritized when needed.
-    But it the number of path points will probably be limited so I preffer this
-    simpler implementation for now.
     """
 
-    def __init__(self, nominal, lower_bound, upper_bound, samples=10):
-        """ Create a toleranced number
+    def __init__(self, lower_bound, upper_bound, nominal=None, samples=10):
 
-        Nominal does not have to be in the middle,
-        it is the preffered value when we ever calculate some kind of cost.
+        if nominal is None:
+            self.nominal = lower_bound + (upper_bound - lower_bound) / 2
+        elif (nominal < lower_bound) or (nominal > upper_bound):
+            raise ValueError("Nominal value must respect the bounds")
+        else:
+            self.nominal = nominal
 
-        Parameters
-        ----------
-        nominal : float
-            Nominal / preffered value for this number
-        lower_bound : float
-        upper_bound : float
-        samples : int
-            The number of samples taken when a sampled version of the number
-            is returned in the range attribute. (default = 10)
-
-        Examples
-        --------
-        >>> a = TolerancedNumber(0.7, 0.0, 1.0, samples = 6)
-        >>> a.range
-        array([ 0. ,  0.2,  0.4,  0.6,  0.8,  1. ])
-        """
-        if nominal < lower_bound or nominal > upper_bound:
-            raise ValueError("nominal value must respect the bounds")
-        self.nominal = nominal
         self.upper = upper_bound
         self.lower = lower_bound
-        self._num_samples = samples
-        self.range = np.linspace(self.lower, self.upper, samples)
+        self.num_samples = samples
 
-    @property
-    def num_samples(self):
-        return self._num_samples
+    def discretise(self):
+        return np.linspace(self.lower, self.upper, self.num_samples)
 
-    @num_samples.setter
-    def num_samples(self, samples):
-        self._num_samples = samples
-        self.range = np.linspace(self.lower, self.upper, samples)
-
-
-class TrajectoryPt:
+class PathPt:
     """ Trajectory point for a desired end-effector pose in cartesian space
-
-    This object bundles the constraints on the end-effector for one point
-    of a path.
-
-    Attributes
-    ----------
-    dim : int
-        Pose dimensions, 3 for 2D planning, 6 for 3D planning.
-    p : list of numpy.ndarray of float or ppr.path.TolerancedNumber
-        Pose constraints for the end-effector (x, y, orientation).
-        Can be a fixed number (a float) or a TolerancedNumber
-    hasTolerance : list of bool
-        Indicates which elements of the pose are toleranced (True) and
-        fixed (False).
-    p_nominal : list of float
-        Same as p for fixed poses, the nominal value for a TolerancedNumber.
-    timing : float
-        Time in seconds it should be executed relative to the previous path
-        point. Not used in current version.
-
-    Examples
-    --------
-    Create a trajectory point at position (1.5, 3.1) with a symmetric
-    tolerance of 0.4 on the x position.
-    The robot orientation should be between 0 and pi / 4.
-    (No preffered orientation, so assumed in the middle, pi / 8)
-
-    >>> x = TolerancedNumber(1.5, 1.0, 2.0)
-    >>> y = 3.1
-    >>> angle = TolerancedNumber(np.pi / 8, 0.0, np.pi / 4)
-    >>> tp = TrajectoryPt([x, y, angle])
-    >>> tp.p_nominal
-    array([ 1.5       ,  3.1       ,  0.39269908])
-
-    A path is created by putting several trajectory points in a list.
-    For example a vertical path with tolerance along the x-axis:
-
-    >>> path = []
-    >>> path.append(TrajectoryPt([TolerancedNumber(1.5, 1.0, 2.0), 0.0, 0]))
-    >>> path.append(TrajectoryPt([TolerancedNumber(1.5, 1.0, 2.0), 0.5, 0]))
-    >>> path.append(TrajectoryPt([TolerancedNumber(1.5, 1.0, 2.0), 1.0, 0]))
-    >>> for p in path: print(p)
-    [ 1.5  0.   0. ]
-    [ 1.5  0.5  0. ]
-    [ 1.5  1.   0. ]
     """
 
-    def __init__(self, pee):
-        """ Create a trajectory point from a given pose
+    def __init__(self, *args):
+        num_args  =len(args)
 
-        [x_position, y_position, angle last joint with x axis]
+        # defaults
+        self.rpy = None
+        self.quat = None
+        self.rpy_has_tol, self.nominal_rpy = [False]*3, np.zeros(3)
 
-        Parameters
-        ----------
-        pee : list or numpy.ndarray of float or ppr.path.TolerancedNumber
-            Desired pose of the end-effector for this path point,
-            every value can be either a float or a TolerancedNumber
-        """
-        self.dim = len(pee)
-        self.p = pee
-        self.hasTolerance = [isinstance(num, TolerancedNumber) for num in pee]
-        p_nominal = []
-        for i in range(self.dim):
-            if self.hasTolerance[i]:
-                p_nominal.append(self.p[i].nominal)
+        if num_args is 0:
+            raise("Zero input arguments")
+
+        elif num_args is 1:
+            self.pos = args[0]
+            self.pos_has_tol, self.nominal_pos = self._check_for_tolerance(self.pos)
+
+        elif num_args is 2:
+            self.pos = args[0]
+            self.pos_has_tol, self.nominal_pos = self._check_for_tolerance(self.pos)
+
+            if len(args[1]) is 3:
+                self.rpy = args[1]
+                self.rpy_has_tol, self.nominal_rpy = self._check_for_tolerance(self.rpy)
+
+            elif len(args[1]) is 4:
+                self.quat = args[1]
+                self.nominal_rpy, self.rpy_has_tol = None, None
+
             else:
-                p_nominal.append(self.p[i])
-        self.p_nominal = np.array(p_nominal)
+                raise ValueError("Second argument needs a length of 3 or 4.")
+
+        else:
+            raise ValueError("Too much input arguments.")
+
         self.timing = 0.1  # with respect to previous point
 
-        # for use of halton sampling
-        # dimension is the number of toleranced numbers
-        self.hs = HaltonSampler(sum(self.hasTolerance))
+    def _check_for_tolerance(self, l):
+        """ Check which value are toleranced numbers and get nominal values.
+
+        Returns a list of booleans indication tolerance and a list of
+        nominal values.
+        """
+        has_tolerance = [isinstance(num, TolerancedNumber) for num in l]
+        nominal_vals = np.zeros(3)
+
+        for i in range(3):
+            if has_tolerance[i]:
+                nominal_vals[i] = l[i].nominal
+            else:
+                nominal_vals[i] = l[i]
+
+        return has_tolerance, nominal_vals
 
     def __str__(self):
-        """ Returns string representation for printing
+        if self.rpy is not None:
+            ori = self.nominal_rpy
+        elif self.quat is not None:
+            ori = self.quat
+        else:
+            ori = 'Free'
 
-        Returns
-        -------
-        string
-            List with nominal values for x, y and orientation.
-        """
-        return str(self.p_nominal)
+        return  'position: {}\norientation: {}'.format(
+                    self.nominal_pos,
+                    ori
+                )
 
     def discretise(self):
         """ Returns a discrete version of the range of a trajectory point
-
-        Based on the sampled range in the Toleranced Numbers, a 3 dimensional grid
-        representing end-effector poses that obey the trajectory point constraints.
-
-        Parameters
-        ----------
-        pt : ppr.path.TrajectoryPt
-
-        Returns
-        -------
-        numpy.ndarray
-            Array with shape (M, 3) containing M possible poses for the robot
-            end-effector that  obey the trajectory point constraints.
-
-        Examples
-        --------
-        >>> x = TolerancedNumber(1, 0.5, 1.5, samples=3)
-        >>> y = TolerancedNumber(0, -1, 1, samples=2)
-        >>> pt = TrajectoryPt([x, y, 0])
-        >>> pt.discretise()
-        array([[ 0.5, -1. ,  0. ],
-               [ 1. , -1. ,  0. ],
-               [ 1.5, -1. ,  0. ],
-               [ 0.5,  1. ,  0. ],
-               [ 1. ,  1. ,  0. ],
-               [ 1.5,  1. ,  0. ]])
         """
         r = []
-        for i in range(self.dim):
-            if self.hasTolerance[i]:
-                r.append(self.p[i].range)
+        # discretise position
+        for i in range(3):
+            if self.pos_has_tol[i]:
+                r.append(self.pos[i].discretise())
             else:
-                r.append(self.p[i])
-        grid = create_grid(r)
-        return grid
+                r.append(self.pos[i])
 
-    def get_samples(self, n, method='random'):
-        """ Return sampled trajectory point based on values between 0 and 1
-        """
-        # check input
-        sample_dim = sum(self.hasTolerance)
+        # discretise roll pitch yaw angles
+        if self.rpy is not None:
+            for i in range(3):
+                if self.rpy_has_tol[i]:
+                    r.append(self.rpy[i].discretise())
+                else:
+                    r.append(self.rpy[i])
 
-        if method == 'random':
-            r = np.random.rand(n, sample_dim)
-        elif method == 'halton':
-            r = self.hs.get_samples(n)
-        else:
-            raise ValueError("Method not implemented.")
+        # discretise quaterion
+        if self.quat is not None:
+            r.extend(self.quat)
 
-        # arrange in array and rescale the samples
-        samples = []
-        cnt = 0
-        for i, val in enumerate(self.p):
-            if self.hasTolerance[i]:
-                samples.append(r[:, cnt] * (val.upper - val.lower) + val.lower)
-                cnt += 1
-            else:
-                samples.append(np.ones(n) * val)
-
-        return np.vstack(samples).T
+        return create_grid(r)
 
 
 class FreeOrientationPt:
