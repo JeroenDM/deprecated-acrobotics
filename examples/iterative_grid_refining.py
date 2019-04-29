@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
+import matplotlib.pyplot as plt
 from acrobotics.util import get_default_axes3d
 from acrobotics.recources.robots import Kuka
 from acrobotics.path import FreeOrientationPt
@@ -24,17 +25,14 @@ floor_plane_tf = np.array([[1, 0, 0, 0.80],
 scene = Collection([floor_plane], [floor_plane_tf])
 
 #%% PLAN PATH
-from acrobotics.planning import cart_to_joint_no_redundancy
-from acrobotics.planning import get_shortest_path
+from acrobotics.planning import cart_to_joint_iterative
 
-Q = cart_to_joint_no_redundancy(robot, path, scene, num_samples=500)
-
-print([len(qi) for qi in Q])
-qp = [qi[0] for qi in Q]
-
-res = get_shortest_path(Q, method='dijkstra')
+res = cart_to_joint_iterative(robot, path, scene, num_samples=200, max_iters=10)
 print(res)
 qp_sol = res['path']
+
+fig, ax = plt.subplots()
+ax.plot(res['costs'], 'o-')
 
 #%% RUN for different amount of sampels
 # solutions = []

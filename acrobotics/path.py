@@ -243,7 +243,7 @@ class FreeOrientationPt:
     def __init__(self, position):
         self.p = np.array(position)
 
-    def get_samples(self, num_samples, rep='rpy'):
+    def get_samples(self, num_samples, rep='rpy', dist=None):
         """ Sample orientation, position is fixed for every sample
         """
         if rep == 'rpy':
@@ -270,7 +270,7 @@ class TolOrientationPt:
         self.p = np.array(position)
         self.o = orientation
 
-    def get_samples(self, num_samples, rep='rpy'):
+    def get_samples(self, num_samples, rep='rpy', dist=0.1):
         """ Sample orientation, position is fixed for every sample
         """
         if rep == 'rpy':
@@ -279,9 +279,9 @@ class TolOrientationPt:
             return np.hstack((pos, rpy))
         if rep == 'transform':
             Ts = []
-            print('sampling near with distance 0.1')
+            print('sampling near with distance dist')
             for i in range(num_samples):
-                qr = Quaternion.random_near(self.o, 0.2)
+                qr = Quaternion.random_near(self.o, dist)
                 Ts.append(qr.transformation_matrix)
             Ts = np.array(Ts)
             for Ti in Ts:

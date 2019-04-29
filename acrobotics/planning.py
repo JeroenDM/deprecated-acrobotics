@@ -5,7 +5,8 @@ Module for sampling based motion planning for path following.
 """
 import numpy as np
 from .cpp.graph import Graph
-from .path import point_to_frame
+from .path import point_to_frame, TolOrientationPt
+from pyquaternion import Quaternion
 
 
 def cart_to_joint_simple(robot, path, scene, q_fixed):
@@ -43,12 +44,14 @@ class SolutionPoint:
     def __init__(self, tp):
         self.tp_init = tp
         self.tp_current = tp
-        self.q_best = []
+        self.q_best = None
         self.jl = []
 
         self.samples = None
         self.joint_solutions = np.array([])
         self.num_js = 0
+        # distance of pi / 4 is almost the same as no tolerance
+        self.quat_dist_tol = np.pi / 4
 
 
     def calc_joint_solutions(self, robot, tp_samples, check_collision=False, scene=None):
@@ -58,29 +61,74 @@ class SolutionPoint:
             if scene == None:
                 raise ValueError("scene is needed for collision checking")
 
-        # use different joint limits for redundant joints
-        if robot.ndof > 3:
-            # save origanal joint limits
-            orig_jl = robot.jl
-            robot.jl = self.jl
-        
         #tp_discrete = self.tp_current.discretise()
         joint_solutions = []
         for Ti in tp_samples:
             sol = robot.ik(Ti)
             if sol['success']:
-                for qsol in sol['q']:
+                for qsol in sol['sol']:
                     if check_collision:
                         if not robot.is_in_collision(qsol, scene):
                             joint_solutions.append(qsol)
                     else:
                         joint_solutions.append(qsol)
 
-        if robot.ndof > 3:
-            # reset original joint_limits
-            robot.jl = orig_jl
-
         return np.array(joint_solutions)
+
+    def resample(self, robot, reduction=2):
+        """ Create a toleranced path around the current solution.
+        Reduce the tolerance range by a factor 'reduction'.
+        """
+
+        # calculate forward kinematics for the current solution
+        Tee = robot.fk(self.q_best)
+        pos = [Tee[0, 3], Tee[1, 3], Tee[2, 3]]
+        ori = Quaternion(matrix=Tee)
+        self.tp_current = TolOrientationPt(pos, ori)
+        self.quat_dist_tol = self.quat_dist_tol / reduction
+
+    def get_samples(self, num_samples):
+        return self.tp_current.get_samples(num_samples,
+            rep='transform',
+            dist=self.quat_dist_tol)
+
+def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
+    """ cartesian path to joint solutions
+
+    The path tolerance is sampled by tp.discretise inside
+    the TrajectoryPoint class.
+
+    Return array with float32 elements, reducing data size.
+    During graph search c++ floats are used, also float32.
+    """
+    current_path = [SolutionPoint(tp) for tp in path]
+    costs = []
+
+    for iter in range(max_iters):
+        Q = []
+        for i, tp in enumerate(current_path):
+            print('Processing point ' + str(i) + '/' + str(len(path)))
+            samples = tp.get_samples(num_samples)
+            Q.append(tp.calc_joint_solutions(robot, samples,
+                check_collision=True,
+                scene=scene).astype('float32'))
+        if np.all([len(qi) for qi in Q]):
+            print('Found collision free configurations for every tp.')
+            sol = get_shortest_path(Q, method='dijkstra')
+            if sol['success']:
+                costs.append(sol['length'])
+                for qi, tpi in zip(sol['path'], current_path):
+                    tpi.q_best = qi
+                    tpi.resample(robot)
+            else:
+                print('failed to find shortest path in graph at iter: {}'.format(iter))
+                return {'success': False}
+        else:
+            print('Not every tp has collision free configurations.')
+            return {'success': False}
+
+    sol['costs'] = costs
+    return sol
 
 def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
     """ cartesian path to joint solutions
