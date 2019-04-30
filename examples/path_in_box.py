@@ -23,14 +23,14 @@ q0 = [0, 0, 1.5, 0, 0, 0, 0]
 
 bot.do_check_self_collision = False
 
-# plot situation
-fig, ax = get_default_axes3d()
-bot.plot(ax, q0, c='k')
-workpiece.plot(ax, c='g')
-for tp in path:
-    tf = point_to_frame(tp.p_nominal)
-    plot_reference_frame(ax, tf)
-plt.show(block=True)
+# # plot situation
+# fig, ax = get_default_axes3d()
+# bot.plot(ax, q0, c='k')
+# workpiece.plot(ax, c='g')
+# for tp in path:
+#     tf = point_to_frame(tp.p_nominal)
+#     plot_reference_frame(ax, tf)
+# plt.show(block=True)
 
 # plan path
 qf_samples = np.linspace(-0.5, 0.5, 10)
@@ -39,7 +39,8 @@ Q = cart_to_joint_simple(bot, path, workpiece, qf_samples)
 print([len(qi) for qi in Q])
 qp = [qi[0] for qi in Q]
 
-res = get_shortest_path(Q, method='dijkstra')
+w = np.array([10, 1, 1, 1, 1, 1, 1], dtype='float32')
+res = get_shortest_path(Q, method='dijkstra', weights=w)
 print(res)
 qp_sol = res['path']
 

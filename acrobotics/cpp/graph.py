@@ -128,6 +128,9 @@ class Graph(_object):
     def add_data_column(self, mat):
         return _graph.Graph_add_data_column(self, mat)
 
+    def set_weights(self, vec_in):
+        return _graph.Graph_set_weights(self, vec_in)
+
     def print_graph_data(self):
         return _graph.Graph_print_graph_data(self)
 

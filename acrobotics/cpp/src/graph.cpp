@@ -170,7 +170,7 @@ float Graph::cost_function(Node n1, Node n2)
     float cost = 0;
     for (std::size_t i = 0; i < (*n1.jv).size(); ++i)
     {
-        cost += fabs((*n1.jv)[i] - (*n2.jv)[i]);
+        cost += weights[i] * fabs((*n1.jv)[i] - (*n2.jv)[i]);
     }
     return cost;
 }
@@ -286,6 +286,29 @@ void Graph::init()
     std::cout << "Found " << num_goals_to_visit << " goal nodes." << std::endl;
     std::cout << "Index last path point " << max_path_index << std::endl;
     path_found = false;
+    std::size_t ndof = gd[0][0].size();
+    std::cout << "Node data has length: " << ndof << std::endl;
+    if (weights.size() != ndof)
+    {
+      std::cout << "Default initializing weights" << std::endl;
+      weights.resize(ndof);
+      for (auto el : weights) el = 1.0;
+    }
+    else
+    {
+      std::cout << "Received weights from python side: ";
+      for (auto el : weights) std::cout << ", " << el;
+      std::cout << std::endl;
+    }
+}
+
+void Graph::set_weights(float *vec_in, int n)
+{
+    weights.resize(n);
+    for (std::size_t i = 0; i < n; ++i)
+    {
+      weights[i] = vec_in[i];
+    }
 }
 
 void Graph::reset()

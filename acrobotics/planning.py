@@ -255,7 +255,7 @@ def cart_to_joint_tool_first_cc(robot, path, scene):
             Q.append([])
     return Q
 
-def get_shortest_path(Q, method='bfs'):
+def get_shortest_path(Q, method='bfs', weights=None):
     """ Calculate the shortest path from joint space data
 
     When the path with trajectory points is converted to joint space,
@@ -289,6 +289,8 @@ def get_shortest_path(Q, method='bfs'):
     n_path = len(Q)
     # initialize graph
     g = Graph()
+    if weights is not None:
+        g.set_weights(weights)
     for c in Q:
         if len(c) == 0:
             # one of the trajectory points is not reachable
