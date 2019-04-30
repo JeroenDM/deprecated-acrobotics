@@ -5,7 +5,7 @@ Module for sampling based motion planning for path following.
 """
 import numpy as np
 from .cpp.graph import Graph
-from .path import point_to_frame, TolOrientationPt, FreeOrientationPt, TolPositionPoint, TolerancedNumber
+from .path import *
 from pyquaternion import Quaternion
 
 DEBUG = False
@@ -42,8 +42,11 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
 class PathPtType:
     TOL_POS = 0
     TOL_ORI = 1
+    AXIS = 2
 
-def get_new_bounds(l, u, m, red=2):
+def get_new_bounds(l, u, m, red=4):
+    """ TODO reduction of 2 does not reduce interval
+    """
     delta = abs(u - l) / red
     l_new = max(m - delta, l)
     u_new = min(m + delta, u)
@@ -83,6 +86,8 @@ class SolutionPoint:
             self.tol_type = PathPtType.TOL_ORI
         elif isinstance(tp, TolPositionPoint):
             self.tol_type = PathPtType.TOL_POS
+        elif isinstance(tp, AxisAnglePt):
+            self.tol_type = PathPtType.AXIS
         else:
             raise ValueError("Unkown path point type")
 
@@ -122,14 +127,23 @@ class SolutionPoint:
         # calculate forward kinematics for the current solution
         Tee = robot.fk(self.q_best)
         pos = [Tee[0, 3], Tee[1, 3], Tee[2, 3]]
-        ori = Quaternion(matrix=Tee)
+        qee = Quaternion(matrix=Tee)
 
         if self.tol_type is PathPtType.TOL_ORI:
-            self.tp_current = TolOrientationPt(pos, ori)
+            self.tp_current = TolOrientationPt(pos, qee)
             self.quat_dist_tol = self.quat_dist_tol / reduction
         elif self.tol_type is PathPtType.TOL_POS:
             ## create reduced tolerance point
-            self.tp_current = resample_trajectory_point(self.tp_current, pos, ori)
+            self.tp_current = resample_trajectory_point(self.tp_current, pos, qee)
+        elif self.tol_type is PathPtType.AXIS:
+            tp = self.tp_current
+            # assume symmetric bounds around current rotation axis
+            new_tol_angle = TolerancedNumber(
+                tp.angle.lower / 2,
+                tp.angle.upper / 2,
+                samples=tp.angle.num_samples
+            )
+            self.tp_current = AxisAnglePt(pos, qee.axis, new_tol_angle, qee)
         else:
             raise ValueError("tolerance type not set.")
 

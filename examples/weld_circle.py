@@ -21,7 +21,7 @@ R1 = np.array([[0, 1, 0],
                [0, 0, -1]], dtype=float)
 q1 = Quaternion(matrix=R1)
 
-at = TolerancedNumber(-np.pi/2, np.pi/2, samples=50)
+at = TolerancedNumber(-np.pi/2, np.pi/2, samples=20)
 tilt_angle = np.pi / 4
 nom_axis = np.array([0, 0, 1])
 path = []
@@ -83,20 +83,29 @@ scene = Collection([table], [table_tf])
 # scene = Collection([], [])
 
 #%% PLAN PATH
-from acrobotics.planning import cart_to_joint_no_redundancy
-from acrobotics.planning import get_shortest_path
+# from acrobotics.planning import cart_to_joint_no_redundancy
+# from acrobotics.planning import get_shortest_path
+#
+# Q = cart_to_joint_no_redundancy(robot, path, scene)
+#
+# print([len(qi) for qi in Q])
+# qp = [qi[0] for qi in Q]
+#
+# res = get_shortest_path(Q, method='dijkstra')
+# print(res)
+# qp_sol = res['path']
 
-Q = cart_to_joint_no_redundancy(robot, path, scene)
+from acrobotics.planning import cart_to_joint_iterative
 
-print([len(qi) for qi in Q])
-qp = [qi[0] for qi in Q]
-
-res = get_shortest_path(Q, method='dijkstra')
+res = cart_to_joint_iterative(robot, path, scene, num_samples=20, max_iters=5)
 print(res)
 qp_sol = res['path']
 
-
 #%% ANIMATE
+fig, ax = plt.subplots()
+ax.plot(res['costs'], 'o-')
+ax.set_title('Cost as function of iterations')
+
 import matplotlib.pyplot as plt
 fig2, ax2 = get_default_axes3d([-1, 1], [-1, 1], [-1, 1])
 for pi in path: pi.plot(ax2)

@@ -3,6 +3,7 @@
 - implement joint limits for robot inverse kinematics
 - fix tests since I changed a lot in path.py
 - redundant joint tolerance reduction
+ - add weights to cost function
 
 #issues
 
