@@ -26,7 +26,7 @@ bot.do_check_self_collision = False
 # plot situation
 fig, ax = get_default_axes3d()
 bot.plot(ax, q0, c='k')
-workpiece.plot(ax, c='r')
+workpiece.plot(ax, c='g')
 for tp in path:
     tf = point_to_frame(tp.p_nominal)
     plot_reference_frame(ax, tf)
@@ -49,7 +49,7 @@ fig2, ax2 = get_default_axes3d()
 for tp in path:
     Ti = point_to_frame(tp.p_nominal)
     plot_reference_frame(ax2, Ti)
-workpiece.plot(ax2, c='r')
+workpiece.plot(ax2, c='g')
 bot.animate_path(fig2, ax2, qp_sol)
 
 plt.show(block=True)

@@ -24,9 +24,8 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
     Q = []
     for i, tp in enumerate(path):
         print('Processing point ' + str(i) + '/' + str(len(path)))
-        for pi in tp.discretise():
+        for Ti in tp.discretise():
             q_sol = []
-            Ti = point_to_frame(pi)
             for qfi in q_fixed:
                 sol = robot.ik(Ti, qfi)
                 if sol['success']:

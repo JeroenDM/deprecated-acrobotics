@@ -32,6 +32,70 @@ class TolerancedNumber:
     def discretise(self):
         return np.linspace(self.lower, self.upper, self.num_samples)
 
+class TolEulerPt:
+    """ Path point with fixed orientation and tol on position
+    """
+
+    def __init__(self, pos, rpy):
+        self.pos = pos
+        self.pos_has_tol, self.pos_nom = self._check_for_tolerance(pos)
+
+        self.rpy = rpy
+        self.rpy_has_tol, self.rpy_nom = self._check_for_tolerance(rpy)
+
+        self.p_nominal = np.hstack((self.pos_nom, self.rpy_nom))
+
+    def _check_for_tolerance(self, l):
+        """ Check which value are toleranced numbers and get nominal values.
+
+        Returns a list of booleans indication tolerance and a list of
+        nominal values.
+        """
+        has_tolerance = [isinstance(num, TolerancedNumber) for num in l]
+        nominal_vals = np.zeros(3)
+
+        for i in range(3):
+            if has_tolerance[i]:
+                nominal_vals[i] = l[i].nominal
+            else:
+                nominal_vals[i] = l[i]
+
+        return has_tolerance, nominal_vals
+
+    def get_samples(self, num_samples, rep=None, dist=None):
+        r = []
+        # discretise position
+        for i in range(3):
+            if self.pos_has_tol[i]:
+                r.append(self.pos[i].discretise())
+            else:
+                r.append(self.pos[i])
+
+        # discretise orientation
+        for i in range(3):
+            if self.rpy_has_tol[i]:
+                r.append(self.rpy[i].discretise())
+            else:
+                r.append(self.rpy[i])
+
+        grid = create_grid(r)
+
+        # convert position and euler angles to transforms
+        samples = []
+        for pi in grid:
+            Ti = np.eye(4)
+            Ti[:3, :3] = np.dot(rot_x(pi[3]), np.dot(rot_y(pi[4]), rot_z(pi[5])))
+            Ti[:3, 3] = pi[:3]
+            samples.append(Ti)
+
+        return samples
+
+    def discretise(self):
+        return self.get_samples(None)
+
+    def plot(self, ax):
+        ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], 'o', c='r')
+
 class TolPositionPoint:
     """ Path point with fixed orientation and tol on position
     """

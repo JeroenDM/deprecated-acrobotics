@@ -1,5 +1,7 @@
 #todo for iterative grid refining
 
+- specify tolerance on euler angles
+- cone constraints
 - implement joint limits for robot inverse kinematics
 - fix tests since I changed a lot in path.py
 - redundant joint tolerance reduction
