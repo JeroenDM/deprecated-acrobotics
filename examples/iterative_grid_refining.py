@@ -5,8 +5,8 @@ from acrobotics.recources.path_on_table import path_pos_tol, scene, path_ori_fre
 from pyquaternion import Quaternion
 
 robot = Kuka()
-path = path_pos_tol
-# path = path_ori_free
+# path = path_pos_tol
+path = path_ori_free
 
 from acrobotics.planning import cart_to_joint_iterative
 

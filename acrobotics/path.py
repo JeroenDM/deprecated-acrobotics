@@ -32,109 +32,6 @@ class TolerancedNumber:
     def discretise(self):
         return np.linspace(self.lower, self.upper, self.num_samples)
 
-class PathPt:
-    """ Trajectory point for a desired end-effector pose in cartesian space
-
-    saves orientation as quaternions, or rpy euler angles?
-    returns 4 by 4 transform matrix if asked for discretisation
-    """
-
-    def __init__(self, *args, **kwargs):
-        num_args  =len(args)
-
-        # defaults
-        self.rpy = None
-        self.quat = None
-        self.rpy_has_tol, self.nominal_rpy = [False]*3, np.zeros(3)
-        self.quat_tol = None
-
-        if num_args is 0:
-            raise("Zero input arguments")
-
-        elif num_args is 1:
-            self.pos = args[0]
-            self.pos_has_tol, self.nominal_pos = self._check_for_tolerance(self.pos)
-
-        elif num_args is 2:
-            self.pos = args[0]
-            self.pos_has_tol, self.nominal_pos = self._check_for_tolerance(self.pos)
-
-            if len(args[1]) is 3:
-                self.rpy = args[1]
-                self.rpy_has_tol, self.nominal_rpy = self._check_for_tolerance(self.rpy)
-
-            elif len(args[1]) is 4:
-                self.quat = args[1]
-                self.nominal_rpy, self.rpy_has_tol = None, None
-                if "quat_tol" in kwargs:
-                    self.quat_tol = kwargs["quat_tol"]
-
-            else:
-                raise ValueError("Second argument needs a length of 3 or 4.")
-
-        else:
-            raise ValueError("Too much input arguments.")
-
-        self.timing = 0.1  # with respect to previous point
-
-    def _check_for_tolerance(self, l):
-        """ Check which value are toleranced numbers and get nominal values.
-
-        Returns a list of booleans indication tolerance and a list of
-        nominal values.
-        """
-        has_tolerance = [isinstance(num, TolerancedNumber) for num in l]
-        nominal_vals = np.zeros(3)
-
-        for i in range(3):
-            if has_tolerance[i]:
-                nominal_vals[i] = l[i].nominal
-            else:
-                nominal_vals[i] = l[i]
-
-        return has_tolerance, nominal_vals
-
-    def __str__(self):
-        if self.rpy is not None:
-            ori = self.nominal_rpy
-        elif self.quat is not None:
-            ori = self.quat
-        else:
-            ori = 'Free'
-
-        return  'position: {}\norientation: {}'.format(
-                    self.nominal_pos,
-                    ori
-                )
-
-    def discretise(self):
-        """ Returns a discrete version of the range of a trajectory point
-        """
-        r = []
-        # discretise position
-        for i in range(3):
-            if self.pos_has_tol[i]:
-                r.append(self.pos[i].discretise())
-            else:
-                r.append(self.pos[i])
-
-        # discretise roll pitch yaw angles
-        if self.rpy is not None:
-            for i in range(3):
-                if self.rpy_has_tol[i]:
-                    r.append(self.rpy[i].discretise())
-                else:
-                    r.append(self.rpy[i])
-
-        # discretise quaterion
-        if self.quat is not None:
-            if self.quat_tol is None:
-                r.extend(self.quat)
-            else:
-                pass
-
-        return create_grid(r)
-
 class TolPositionPoint:
     """ Path point with fixed orientation and tol on position
     """
@@ -217,17 +114,19 @@ class FreeOrientationPt:
         self.p = np.array(position)
 
     def get_samples(self, num_samples, rep='rpy', dist=None):
-        """ Sample orientation, position is fixed for every sample
+        """ Sample orientation (position is fixed)
         """
         if rep == 'rpy':
             rpy = np.array(sample_SO3(n=num_samples, rep='rpy'))
             pos = np.tile(self.p, (num_samples, 1))
             return np.hstack((pos, rpy))
-        if rep == 'transform':
+        elif rep == 'transform':
             Ts = np.array(sample_SO3(n=num_samples, rep='transform'))
             for Ti in Ts:
                 Ti[:3, 3] = self.p
             return Ts
+        else:
+            raise ValueError("Invalid argument for rep: {}".format(rep))
 
     def discretise(self):
         return self.get_samples(100)
@@ -243,23 +142,17 @@ class TolOrientationPt:
         self.p = np.array(position)
         self.o = orientation
 
-    def get_samples(self, num_samples, rep='rpy', dist=0.1):
-        """ Sample orientation, position is fixed for every sample
+    def get_samples(self, num_samples, rep=None, dist=0.1):
+        """ sample near nominal orientation (position fixed)
         """
-        if rep == 'rpy':
-            rpy = np.array(sample_SO3(n=num_samples, rep='rpy'))
-            pos = np.tile(self.p, (num_samples, 1))
-            return np.hstack((pos, rpy))
-        if rep == 'transform':
-            Ts = []
-            print('sampling near with distance dist')
-            for i in range(num_samples):
-                qr = Quaternion.random_near(self.o, dist)
-                Ts.append(qr.transformation_matrix)
-            Ts = np.array(Ts)
-            for Ti in Ts:
-                Ti[:3, 3] = self.p
-            return Ts
+        samples = []
+        for i in range(num_samples):
+            qr = Quaternion.random_near(self.o, dist)
+            samples.append(qr.transformation_matrix)
+        samples = np.array(samples)
+        for Ti in samples:
+            Ti[:3, 3] = self.p
+        return samples
 
     def discretise(self):
         return self.get_samples(100)
@@ -273,8 +166,6 @@ class TolOrientationPt:
 # =============================================================================
 # Functions
 # =============================================================================
-
-
 def point_to_frame(p):
     """ Convert pose as 6-element vector to transform matrix
 
