@@ -1,7 +1,12 @@
 #todo for iterative grid refining
 
+- simple heuristic to detect configuration jumps
+  without knowing the robot type:
+  monitor cost between two configurations
+  outside 2 stadard deviations could be considered jump?
 - specify tolerance on euler angles
 - cone constraints
+- other cost functions (deviation from nominal?)
 - implement joint limits for robot inverse kinematics
 - fix tests since I changed a lot in path.py
 - redundant joint tolerance reduction

@@ -290,9 +290,11 @@ void Graph::init()
     std::cout << "Node data has length: " << ndof << std::endl;
     if (weights.size() != ndof)
     {
-      std::cout << "Default initializing weights" << std::endl;
       weights.resize(ndof);
-      for (auto el : weights) el = 1.0;
+      for (std::size_t i=0; i<ndof; ++i) weights[i] = 1.0;
+      std::cout << "Default initializing weights: ";
+      for (auto el : weights) std::cout << ", " << el;
+      std::cout << std::endl;
     }
     else
     {
