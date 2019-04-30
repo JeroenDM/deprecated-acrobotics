@@ -8,6 +8,7 @@ from .cpp.graph import Graph
 from .path import point_to_frame, TolOrientationPt, FreeOrientationPt, TolPositionPoint, TolerancedNumber
 from pyquaternion import Quaternion
 
+DEBUG = False
 
 def cart_to_joint_simple(robot, path, scene, q_fixed):
     """ cartesian path to joint solutions
@@ -194,6 +195,12 @@ def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
                 for qi in sol['sol']:
                     if not robot.is_in_collision(qi, scene):
                         q_sol.append(qi)
+                    else:
+                        if DEBUG:
+                            print("Collision for point: {}".format(Ti[:3, 3]))
+            else:
+                if DEBUG:
+                    print("IK failed for point: {}".format(Ti[:3, 3]))
 
         if len(q_sol) > 0:
             Q.append(np.vstack(q_sol).astype('float32'))

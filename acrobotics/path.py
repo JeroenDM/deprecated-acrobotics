@@ -161,7 +161,7 @@ class TolPositionPoint:
 
         return has_tolerance, nominal_vals
 
-    def get_samples(self, samples, rep=None, dist=None):
+    def get_samples(self, num_samples, rep=None, dist=None):
         r = []
         # discretise position
         for i in range(3):
@@ -183,6 +183,30 @@ class TolPositionPoint:
     def plot(self, ax):
         ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], 'o', c='r')
 
+class AxisAnglePt:
+    """ Trajectory point that has a tolerance on the end-effector orientation
+    given as +/- angle around an axis.
+    """
+    def __init__(self, pos, axis, angle, q_nominal):
+        """ angle is toleranced number, the others are fixed
+        """
+        self.pos = np.array(pos)
+        self.quat = q_nominal
+        self.axis = axis
+        self.angle = angle
+
+    def get_samples(self, num_samples, rep='transform', dist=None):
+        samples = []
+        for ai in self.angle.discretise():
+            qi = Quaternion(axis=self.axis, angle=ai) * self.quat
+            Ti = qi.transformation_matrix
+            Ti[:3, 3] = self.pos
+            samples.append(Ti)
+
+        return samples
+
+    def plot(self, ax):
+        ax.plot([self.pos[0]], [self.pos[1]], [self.pos[2]], 'o', c='r')
 
 class FreeOrientationPt:
     """ Trajectory point with fixed position and free orientation.
