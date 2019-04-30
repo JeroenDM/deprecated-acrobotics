@@ -5,7 +5,7 @@ Module for sampling based motion planning for path following.
 """
 import numpy as np
 from .cpp.graph import Graph
-from .path import point_to_frame, TolOrientationPt
+from .path import point_to_frame, TolOrientationPt, FreeOrientationPt, TolPositionPoint, TolerancedNumber
 from pyquaternion import Quaternion
 
 
@@ -38,6 +38,36 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
             Q.append([])
     return Q
 
+class PathPtType:
+    TOL_POS = 0
+    TOL_ORI = 1
+
+def get_new_bounds(l, u, m, red=2):
+    delta = abs(u - l) / red
+    l_new = max(m - delta, l)
+    u_new = min(m + delta, u)
+    return l_new, u_new
+
+def resample_trajectory_point(tp, pos_ee, quat):
+    """ create a new trajectory point with smaller bounds
+    """
+    p_new = []
+    for i, val in enumerate(tp.pos):
+        if tp.pos_has_tol[i]:
+            # check for rounding errors on pfk
+            # TODO move this code into toleranced number
+            if pos_ee[i] < val.lower:
+                pos_ee[i] = val.lower
+            if pos_ee[i] > val.upper:
+                pos_ee[i] = val.upper
+            # now calculate new bounds with corrected pkf
+            l, u = get_new_bounds(val.lower, val.upper, pos_ee[i])
+            val_new = TolerancedNumber(l, u, samples=val.num_samples)
+        else:
+            val_new = val
+        p_new.append(val_new)
+    return TolPositionPoint(p_new, quat)
+
 class SolutionPoint:
     """ class to save intermediate solution info for trajectory point
     """
@@ -46,6 +76,14 @@ class SolutionPoint:
         self.tp_current = tp
         self.q_best = None
         self.jl = []
+
+        self.tol_type = None
+        if isinstance(tp, FreeOrientationPt):
+            self.tol_type = PathPtType.TOL_ORI
+        elif isinstance(tp, TolPositionPoint):
+            self.tol_type = PathPtType.TOL_POS
+        else:
+            raise ValueError("Unkown path point type")
 
         self.samples = None
         self.joint_solutions = np.array([])
@@ -84,8 +122,15 @@ class SolutionPoint:
         Tee = robot.fk(self.q_best)
         pos = [Tee[0, 3], Tee[1, 3], Tee[2, 3]]
         ori = Quaternion(matrix=Tee)
-        self.tp_current = TolOrientationPt(pos, ori)
-        self.quat_dist_tol = self.quat_dist_tol / reduction
+
+        if self.tol_type is PathPtType.TOL_ORI:
+            self.tp_current = TolOrientationPt(pos, ori)
+            self.quat_dist_tol = self.quat_dist_tol / reduction
+        elif self.tol_type is PathPtType.TOL_POS:
+            ## create reduced tolerance point
+            self.tp_current = resample_trajectory_point(self.tp_current, pos, ori)
+        else:
+            raise ValueError("tolerance type not set.")
 
     def get_samples(self, num_samples):
         return self.tp_current.get_samples(num_samples,

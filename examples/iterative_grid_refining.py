@@ -27,7 +27,7 @@ scene = Collection([floor_plane], [floor_plane_tf])
 #%% PLAN PATH
 from acrobotics.planning import cart_to_joint_iterative
 
-res = cart_to_joint_iterative(robot, path, scene, num_samples=200, max_iters=10)
+res = cart_to_joint_iterative(robot, path, scene, num_samples=200, max_iters=3)
 print(res)
 qp_sol = res['path']
 

@@ -12,13 +12,21 @@ robot = Kuka()
 
 path = []
 
-xt = TolerancedNumber(0.4, 1.2)
+# xt = TolerancedNumber(0.4, 1.2)
 q1 = Quaternion(axis=[0, 1, 0], angle=np.pi)
+dx = 0.05
 
-for s in np.linspace(0, 1, 8):
+for s in np.linspace(0, 1, 10):
+    xi = 0.8 + 0.1 * np.sin(2 * np.pi * s)
+    xt = TolerancedNumber(xi - dx, xi + dx)
     yi = s * 0.2 + (1-s) * (-0.2)
     zi = 0.2
     path.append(TolPositionPoint([xt, yi, zi], q1))
+
+# import matplotlib.pyplot as plt
+# fig2, ax2 = get_default_axes3d([-1, 1], [-1, 1], [-1, 1])
+# for pi in path: pi.plot(ax2)
+# plt.show()
 
 # print(path[0].discretise())
 
@@ -46,14 +54,23 @@ scene = Collection([floor_plane, obstacle],
                     [floor_plane_tf, obstacle_tf])
 
 #%% PLAN PATH
-from acrobotics.planning import cart_to_joint_iterative,cart_to_joint_no_redundancy
-from acrobotics.planning import get_shortest_path
-#res = cart_to_joint_iterative(robot, path, scene, num_samples=200, max_iters=10)
-Q = cart_to_joint_no_redundancy(robot, path, scene, num_samples=200)
+# from acrobotics.planning import cart_to_joint_iterative,cart_to_joint_no_redundancy
+# from acrobotics.planning import get_shortest_path
+# #res = cart_to_joint_iterative(robot, path, scene, num_samples=200, max_iters=10)
+# Q = cart_to_joint_no_redundancy(robot, path, scene, num_samples=200)
+#
+# res = get_shortest_path(Q, method='dijkstra')
+# print(res)
+# qp_sol = res['path']
 
-res = get_shortest_path(Q, method='dijkstra')
+from acrobotics.planning import cart_to_joint_iterative
+
+res = cart_to_joint_iterative(robot, path, scene, num_samples=200, max_iters=10)
 print(res)
 qp_sol = res['path']
+
+fig, ax = plt.subplots()
+ax.plot(res['costs'], 'o-')
 
 
 #%% ANIMATE
