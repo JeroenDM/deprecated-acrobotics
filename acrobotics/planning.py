@@ -162,6 +162,7 @@ def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
     """
     current_path = [SolutionPoint(tp) for tp in path]
     costs = []
+    paths = []
 
     for iter in range(max_iters):
         Q = []
@@ -176,6 +177,7 @@ def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
             sol = get_shortest_path(Q, method='dijkstra')
             if sol['success']:
                 costs.append(sol['length'])
+                paths.append(sol['path'])
                 for qi, tpi in zip(sol['path'], current_path):
                     tpi.q_best = qi
                     tpi.resample(robot)
@@ -187,6 +189,7 @@ def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
             return {'success': False}
 
     sol['costs'] = costs
+    sol['paths'] = paths
     return sol
 
 def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):

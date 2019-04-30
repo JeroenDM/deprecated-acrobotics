@@ -13,7 +13,7 @@ q1 = Quaternion(axis=[0, 1, 0], angle=np.pi)
 dx = 0.05
 
 path_pos_tol = []
-for s in np.linspace(0, 1, 10):
+for s in np.linspace(0, 1, 20):
     xi = 0.8 + 0.1 * np.sin(2 * np.pi * s)
     xt = TolerancedNumber(xi - dx, xi + dx)
     yi = s * 0.2 + (1-s) * (-0.2)
@@ -22,7 +22,7 @@ for s in np.linspace(0, 1, 10):
 
 # straight line with free end-effector orientation
 path_ori_free = []
-for s in np.linspace(0, 1, 8):
+for s in np.linspace(0, 1, 15):
     xi = 0.8
     yi = s * 0.2 + (1-s) * (-0.2)
     zi = 0.2

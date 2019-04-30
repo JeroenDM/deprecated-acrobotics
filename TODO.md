@@ -14,6 +14,9 @@
 
 #issues
 
+- memory usage seems to be an issue... for 10000 samples per point and saving
+thre results. possible **memory leak** in c++ code??
+ +/- 2 GiB for 10 000 samples for 15 points
 - How to sample quaternions around a nominal value
  -> look at ompl
  => create random number generator classes to support
@@ -26,3 +29,5 @@
 
 Note on math vs numpy
 https://stackoverflow.com/questions/3650194/are-numpys-math-functions-faster-than-pythons
+
+matplotlib.font_manager._rebuild()
