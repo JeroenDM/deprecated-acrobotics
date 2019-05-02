@@ -39,18 +39,21 @@ Q = cart_to_joint_simple(bot, path, workpiece, qf_samples)
 print([len(qi) for qi in Q])
 qp = [qi[0] for qi in Q]
 
-w = np.array([10, 1, 1, 1, 1, 1, 1], dtype='float32')
+w = np.array([1, 1, 1, 1, 1, 1, 1], dtype='float32')
 res = get_shortest_path(Q, method='dijkstra', weights=w)
 print(res)
 qp_sol = res['path']
 
 # animate path
 fig2, ax2 = get_default_axes3d()
-
+ax2.set_axis_off()
+ax2.view_init(15, -30)
 for tp in path:
     Ti = point_to_frame(tp.p_nominal)
     plot_reference_frame(ax2, Ti)
 workpiece.plot(ax2, c='g')
 bot.animate_path(fig2, ax2, qp_sol)
+
+#bot.animation.save('../box_path.gif', writer='imagemagick', fps=5)
 
 plt.show(block=True)

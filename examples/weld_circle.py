@@ -107,8 +107,12 @@ ax.plot(res['costs'], 'o-')
 ax.set_title('Cost as function of iterations')
 
 import matplotlib.pyplot as plt
-fig2, ax2 = get_default_axes3d([-1, 1], [-1, 1], [-1, 1])
+fig2, ax2 = get_default_axes3d([0, 1.5], [-0.75, 0.75], [0, 1.5])
 for pi in path: pi.plot(ax2)
 scene.plot(ax2, c='g')
 robot.animate_path(fig2, ax2, qp_sol)
+ax2.set_axis_off()
+
+#robot.animation.save('../animation.gif', writer='imagemagick', fps=5)
+
 plt.show(block=True)
