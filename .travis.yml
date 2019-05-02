@@ -3,6 +3,10 @@ language: python
 # sudo false implies containerized builds
 sudo: required
 
+branches:
+  only:
+  - master
+
 python:
   - 3.6
  
