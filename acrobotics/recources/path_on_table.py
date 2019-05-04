@@ -41,8 +41,30 @@ obstacle_tf = np.array([[1, 0, 0, 1.00],
                         [0, 0, 1, 0.12],
                         [0, 0, 0, 1]])
 
+
+
 scene = Collection([table, obstacle],
                    [table_tf, obstacle_tf])
+
+table2 = Shape(0.5, 0.25, 0.1)
+table2_tf = np.array([[1, 0, 0, 0.80],
+                    [0, 1, 0, 0.25],
+                    [0, 0, 1, 0.13],
+                    [0, 0, 0, 1]])
+
+box_up = Shape(0.1, 0.1, 0.1)
+box_lo = Shape(0.1, 0.1, 0.1)
+box_up_tf = np.array([[1, 0, 0, 0.80],
+                    [0, 1, 0, -0.1],
+                    [0, 0, 1, 0.32],
+                    [0, 0, 0, 1]])
+box_lo_tf = np.array([[1, 0, 0, 0.80],
+                    [0, 1, 0, -0.1],
+                    [0, 0, 1, 0.08],
+                    [0, 0, 0, 1]])
+
+scene2 = Collection([table2, box_up, box_lo],
+                    [table2_tf, box_up_tf, box_lo_tf])
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

@@ -1,5 +1,6 @@
 #todo for iterative grid refining
 
+- use path following objective to avoid ninja moves?
 - add narrow corridor case
 - is the way fcl is used faster now??
   add fcl for the all robot shapes and scene ate once.
