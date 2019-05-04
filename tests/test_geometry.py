@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from numpy.testing import assert_almost_equal
-from acrobotics.geometry import Shape
+from acrobotics.geometry import Shape, Collection
 from acrobotics.util import pose_z
 
 tf_identity = np.eye(4)
@@ -77,6 +77,35 @@ class TestShape():
         v0 = np.hstack((v[0], v[1]))
         assert_almost_equal(v0, e[0])
 
+    def test_polyhedron(self):
+        b = Shape(1, 2, 3)
+        A, b = b.get_polyhedron(np.eye(4))
+        Aa = np.array([[1, 0, 0],
+                       [-1, 0, 0],
+                       [0, 1, 0],
+                       [0, -1, 0],
+                       [0, 0, 1],
+                       [0, 0, -1]])
+        ba = np.array([0.5, 0.5, 1, 1, 1.5, 1.5])
+        assert_almost_equal(A, Aa)
+        assert_almost_equal(b, ba)
+
+    def test_polyhedron_transformed(self):
+        b = Shape(1, 2, 3)
+        tf = pose_z(0.3, 0.1, 0.2, -0.3)
+        A, b = b.get_polyhedron(tf)
+        Aa = np.array([[1, 0, 0],
+                       [-1, 0, 0],
+                       [0, 1, 0],
+                       [0, -1, 0],
+                       [0, 0, 1],
+                       [0, 0, -1]])
+        ba = np.array([0.5, 0.5, 1, 1, 1.5, 1.5])
+        Aa = np.dot(Aa, tf[:3, :3].T)
+        ba = ba + np.dot(Aa, tf[:3, 3])
+        assert_almost_equal(A, Aa)
+        assert_almost_equal(b, ba)
+
     def test_is_in_collision(self):
         b1 = Shape(1, 1, 1)
         b2 = Shape(1, 1, 2)
@@ -99,3 +128,23 @@ class TestShape():
         ax = Axes3D(fig)
         b1.plot(ax, tf_identity)
         assert True
+
+class TestCollection():
+    def test_polyhedron(self):
+        b = Shape(1, 2, 3)
+        tf = pose_z(0.3, 0.1, 0.2, -0.3)
+        col = Collection([b], [tf])
+        A, b = col.get_polyhedron()
+        assert(len(A) == 1)
+        assert(len(b) == 1)
+        Aa = np.array([[1, 0, 0],
+                       [-1, 0, 0],
+                       [0, 1, 0],
+                       [0, -1, 0],
+                       [0, 0, 1],
+                       [0, 0, -1]])
+        ba = np.array([0.5, 0.5, 1, 1, 1.5, 1.5])
+        Aa = np.dot(Aa, tf[:3, :3].T)
+        ba = ba + np.dot(Aa, tf[:3, 3])
+        assert_almost_equal(A[0], Aa)
+        assert_almost_equal(b[0], ba)
