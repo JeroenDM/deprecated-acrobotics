@@ -48,7 +48,7 @@ void Graph::multi_source_bfs()
         for (Node *nb : neighbors)
         {
             // update neighbors distance
-            float dist = (*current).dist + cost_function(*nb, *current);
+            float dist = (*current).dist + cost_function_2(*nb, *current);
             if (dist < (*nb).dist)
             {
                 (*nb).dist = dist;
@@ -104,7 +104,7 @@ void Graph::multi_source_dijkstra()
         for (Node *nb : neighbors)
         {
             // update neighbors distance
-            float dist = (*current).dist + cost_function(*nb, *current);
+            float dist = (*current).dist + cost_function_2(*nb, *current);
             if (dist < (*nb).dist)
             {
                 (*nb).dist = dist;
@@ -175,13 +175,23 @@ float Graph::cost_function(Node n1, Node n2)
     return cost;
 }
 
+float Graph::cost_function_2(Node n1, Node n2)
+{
+    float cost = 0;
+    for (std::size_t i = 0; i < (*n1.jv).size(); ++i)
+    {
+        cost += weights[i] * std::pow((*n1.jv)[i] - (*n2.jv)[i], 2.0);
+    }
+    return cost;
+}
+
 void Graph::visit(Node *n)
 {
     std::vector<Node *> neighbors;
     neighbors = get_neighbors(n);
     for (Node *nb : neighbors)
     {
-        float dist = (*n).dist + cost_function(*nb, *n);
+        float dist = (*n).dist + cost_function_2(*nb, *n);
         if (dist < (*nb).dist)
         {
             (*nb).dist = dist;
@@ -250,7 +260,7 @@ float Graph::get_path_cost(std::vector<Node *> &path)
     float cost = 0.0;
     for (std::size_t i = 0; i < path.size() - 1; ++i)
     {
-        cost += cost_function(*path[i], *path[i + 1]);
+        cost += cost_function_2(*path[i], *path[i + 1]);
     }
     return cost;
 }

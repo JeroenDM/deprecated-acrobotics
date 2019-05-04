@@ -71,6 +71,7 @@ class Graph
     void reset_node_array();
     void init_unvisited(std::vector<Node *> &uv);
     float cost_function(Node n1, Node n2);
+    float cost_function_2(Node n1, Node n2);
     void visit(Node *node);
     std::vector<Node *> get_neighbors(Node *node);
     std::vector<Node *> get_path_nodes();
