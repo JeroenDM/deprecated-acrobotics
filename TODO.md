@@ -1,5 +1,8 @@
 #todo for iterative grid refining
 
+- add narrow corridor case
+- is the way fcl is used faster now??
+  add fcl for the all robot shapes and scene ate once.
 - simple heuristic to detect configuration jumps
   without knowing the robot type:
   monitor cost between two configurations
@@ -14,6 +17,7 @@
 
 #issues
 
+- do the dummy nodes for dijkstra actually work?
 - memory usage seems to be an issue... for 10000 samples per point and saving
 thre results. possible **memory leak** in c++ code??
  +/- 2 GiB for 10 000 samples for 15 points
