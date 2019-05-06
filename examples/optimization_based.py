@@ -1,16 +1,17 @@
+import time
 import numpy as np
 import casadi as ca
 from casadi import cos, sin, dot
 from acrobotics.util import get_default_axes3d
-from acrobotics.recources.path_on_table import scene2
+from acrobotics.recources.path_on_table import scene2, scene
 from acrobotics.recources.robots import Kuka
 from acrobotics.optimization import fk_all_links, fk_kuka2
 
 robot = Kuka()
 
-scene = scene2
+# scene = scene2
 
-N = 10 # path discretization
+N = 15 # path discretization
 # number of planes in the polyhedrons (the same for all shapes, robot and obstacles!)
 S = 6
 ndof = robot.ndof  #  robot degrees of freedom
@@ -34,6 +35,8 @@ for link in robot.links:
     pol_mat_b.append(bi)
 
 pol_mat_a_scene , pol_mat_b_scene = scene.get_polyhedron()
+
+time_before = time.time()
 
 opti = ca.Opti()
 
@@ -79,7 +82,16 @@ opti.solver('ipopt')
 
 sol = opti.solve()
 
+time_after = time.time()
+run_time = time_after - time_before
+
 qp_sol = opti.value(q)
+
+cost = np.sum((qp_sol[:-1, :] - qp_sol[1:, :])**2)
+
+print("Cost: {}".format(cost))
+print("Runtime: {}".format(run_time))
+
 
 import matplotlib.pyplot as plt
 fig, ax = get_default_axes3d([0, 1], [-0.5, 0.5], [0, 1])

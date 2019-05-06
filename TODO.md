@@ -1,5 +1,6 @@
 #todo for iterative grid refining
 
+- check cost difference iterative and optimization
 - use path following objective to avoid ninja moves?
 - add narrow corridor case (done, but more needed?)
 - is the way fcl is used faster now??

@@ -3,6 +3,7 @@
 """
 Module for sampling based motion planning for path following.
 """
+import time
 import numpy as np
 from .cpp.graph import Graph
 from .path import *
@@ -23,7 +24,7 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
     """
     Q = []
     for i, tp in enumerate(path):
-        print('Processing point ' + str(i) + '/' + str(len(path)))
+        print('Processing point ' + str(i+1) + '/' + str(len(path)))
         for Ti in tp.discretise():
             q_sol = []
             for qfi in q_fixed:
@@ -163,11 +164,13 @@ def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
     current_path = [SolutionPoint(tp) for tp in path]
     costs = []
     paths = []
+    times = []
 
     for iter in range(max_iters):
         Q = []
+        time_before = time.time()
         for i, tp in enumerate(current_path):
-            print('Processing point ' + str(i) + '/' + str(len(path)))
+            print('Processing point ' + str(i+1) + '/' + str(len(path)))
             samples = tp.get_samples(num_samples)
             Q.append(tp.calc_joint_solutions(robot, samples,
                 check_collision=True,
@@ -176,8 +179,12 @@ def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
             print('Found collision free configurations for every tp.')
             sol = get_shortest_path(Q, method='dijkstra')
             if sol['success']:
+                # save results
+                time_after = time.time()
                 costs.append(sol['length'])
                 paths.append(sol['path'])
+                times.append(time_after - time_before)
+                # resample trajectory
                 for qi, tpi in zip(sol['path'], current_path):
                     tpi.q_best = qi
                     tpi.resample(robot)
@@ -190,6 +197,7 @@ def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
 
     sol['costs'] = costs
     sol['paths'] = paths
+    sol['times'] = times
     return sol
 
 def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
@@ -203,7 +211,7 @@ def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
     """
     Q = []
     for i, tp in enumerate(path):
-        print('Processing point ' + str(i) + '/' + str(len(path)))
+        print('Processing point ' + str(i+1) + '/' + str(len(path)))
         q_sol = []
         for Ti in tp.get_samples(num_samples, rep='transform'):
             sol = robot.ik(Ti)
