@@ -1,7 +1,7 @@
 #todo for iterative grid refining
 
 - use path following objective to avoid ninja moves?
-- add narrow corridor case
+- add narrow corridor case (done, but more needed?)
 - is the way fcl is used faster now??
   add fcl for the all robot shapes and scene ate once.
 - simple heuristic to detect configuration jumps
@@ -12,9 +12,7 @@
 - cone constraints
 - other cost functions (deviation from nominal?)
 - implement joint limits for robot inverse kinematics
-- fix tests since I changed a lot in path.py
 - redundant joint tolerance reduction
- - add weights to cost function
 
 #issues
 
