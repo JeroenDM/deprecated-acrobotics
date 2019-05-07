@@ -3,13 +3,13 @@ import numpy as np
 import casadi as ca
 from casadi import cos, sin, dot
 from acrobotics.util import get_default_axes3d
-from acrobotics.recources.path_on_table import scene2, scene
+from acrobotics.recources.path_on_table import scene2, scene1
 from acrobotics.recources.robots import Kuka
 from acrobotics.optimization import fk_all_links, fk_kuka2
 
 robot = Kuka()
 
-# scene = scene2
+scene = scene1
 
 N = 15 # path discretization
 # number of planes in the polyhedrons (the same for all shapes, robot and obstacles!)
