@@ -68,7 +68,7 @@ for k in range(N):
                     br,
                     pol_mat_b_scene[j])
 
-V = ca.sum1( (ca.sum2(q[:-1, :] - q[1:, :])**2 ))# + 0.05* ca.sumsqr(q) #+ 1 / ca.sum1(q[:, 4]**2)
+V = ca.sum1( ca.sum2(  (q[:-1, :] - q[1:, :])**2  ) )# + 0.05* ca.sumsqr(q) #+ 1 / ca.sum1(q[:, 4]**2)
 
 opti.minimize(V)
 
