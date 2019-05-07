@@ -27,7 +27,7 @@ scene = Collection([floor_plane], [floor_plane_tf])
 from acrobotics.planning import cart_to_joint_no_redundancy
 from acrobotics.planning import get_shortest_path
 
-Q = cart_to_joint_no_redundancy(robot, path, scene)
+Q = cart_to_joint_no_redundancy(robot, path, scene, num_samples=200)
 
 print([len(qi) for qi in Q])
 qp = [qi[0] for qi in Q]

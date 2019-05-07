@@ -28,24 +28,28 @@ for s in np.linspace(0, 1, 15):
     zi = 0.2
     path_ori_free.append(FreeOrientationPt([xi, yi, zi]))
 
-# table with obstacle
+# flat box over which the robot has to move its end-effector
 table = Shape(0.5, 0.5, 0.1)
 table_tf = np.array([[1, 0, 0, 0.80],
                     [0, 1, 0, 0.00],
                     [0, 0, 1, 0.12],
                     [0, 0, 0, 1]])
 
-obstacle = Shape(0.1, 0.1, 0.5)
-obstacle_tf = np.array([[1, 0, 0, 1.00],
-                        [0, 1, 0, 0.25],
-                        [0, 0, 1, 0.12],
-                        [0, 0, 0, 1]])
+# obstacle = Shape(0.1, 0.1, 0.5)
+# obstacle_tf = np.array([[1, 0, 0, 1.00],
+#                         [0, 1, 0, 0.25],
+#                         [0, 0, 1, 0.12],
+#                         [0, 0, 0, 1]])
 
 
 
-scene = Collection([table, obstacle],
-                   [table_tf, obstacle_tf])
+# scene1 = Collection([table, obstacle],
+#                    [table_tf, obstacle_tf])
 
+scene1 = Collection([table], [table_tf])
+
+# a smaller table with two boxes at the beginning of the path
+# the end-effector has to move in between the boxes and over the table
 table2 = Shape(0.5, 0.25, 0.1)
 table2_tf = np.array([[1, 0, 0, 0.80],
                     [0, 1, 0, 0.25],
@@ -72,5 +76,6 @@ if __name__ == "__main__":
 
     fig2, ax2 = get_default_axes3d([-1, 1], [-1, 1], [-1, 1])
     for pi in path_ori_free: pi.plot(ax2)
-    scene.plot(ax2, c='g')
+    scene1.plot(ax2, c='g')
+    scene2.plot(ax2, c='k')
     plt.show()
