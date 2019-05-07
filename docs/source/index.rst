@@ -16,6 +16,7 @@ Collision checking and graph search implemented in C++ and Python interface gene
 
    robots_and_links.ipynb
    geometry_nb.ipynb
+   tolerances_on_a_path.ipynb
    api_doc.rst
 
 Quicklinks

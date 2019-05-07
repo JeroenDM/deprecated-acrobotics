@@ -215,14 +215,20 @@ class HaltonSampler():
         return np.array(seq).T
 
 
-def sample_SO3(n=10, rep='quat'):
+def sample_SO3(n=10, rep='quat', method='random'):
     """Generate a random unit quaternion.
 
     Uniformly distributed across the rotation space
     As per: http://planning.cs.uiuc.edu/node198.html
     and code from http://kieranwynn.github.io/pyquaternion
     """
-    r1, r2, r3 = np.random.random((3, n))
+    if method is 'random':
+        r1, r2, r3 = np.random.random((3, n))
+    elif method is 'halton':
+        hs = HaltonSampler(3)
+        r1, r2, r3 = (hs.get_samples(n)).T
+    else:
+        raise ValueError("Invalid sampling method: {}".format(method))
 
     q1 = np.sqrt(1.0 - r1) * (np.sin(2 * pi * r2))
     q2 = np.sqrt(1.0 - r1) * (np.cos(2 * pi * r2))

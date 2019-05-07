@@ -6,7 +6,7 @@ A path inside this box with tolerance on orientation.
 import numpy as np
 from ..geometry import Shape, Collection
 from ..util import pose_x
-from ..path import TolerancedNumber, TrajectoryPt
+from ..path import TolerancedNumber, TolEulerPt
 
 h = 1.0
 w = 0.8
@@ -38,12 +38,12 @@ p_offset = np.array([0, -0.04, 0.04])
 
 path = []
 RX = -3*np.pi/4
-tol_rx = TolerancedNumber(RX, RX-0.5, RX + 0.5, samples=3)
-tol_ry = TolerancedNumber(0, -0.5, 0.5, samples=3)
-tol_rz = TolerancedNumber(np.pi, 0, 2*np.pi, samples=10)
+tol_rx = TolerancedNumber(RX-0.5, RX + 0.5, samples=3)
+tol_ry = TolerancedNumber(-0.5  , 0.5     , samples=3)
+tol_rz = TolerancedNumber(0     , 2*np.pi , samples=10)
 
 for par in np.linspace(0, 1, N):
     p_i = (1 - par) * p_start + par * p_goal + p_offset
 
-    tp_i = TrajectoryPt([p_i[0], p_i[1], p_i[2], tol_rx, 0, tol_rz])
+    tp_i = TolEulerPt([p_i[0], p_i[1], p_i[2]], [tol_rx, 0, tol_rz])
     path.append(tp_i)

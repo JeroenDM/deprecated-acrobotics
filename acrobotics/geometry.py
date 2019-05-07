@@ -74,6 +74,15 @@ class Shape:
         n[5] = np.dot(R, [ 0,  0, -1])
         return n
 
+    def get_polyhedron(self, tf):
+        """ Shape represented as inequality A*x <= b """
+        A = self.get_normals(tf)
+        b = 0.5 * np.array([self.dx, self.dx,
+                            self.dy, self.dy,
+                            self.dz, self.dz])
+        b = b + np.dot(A, tf[:3, 3])
+        return A, b
+
     def is_in_collision(self, tf, other, tf_other):
         fcl_tf_1 = fcl.Transform(tf[:3, :3], tf[:3, 3])
         fcl_tf_2 = fcl.Transform(tf_other[:3, :3], tf_other[:3, 3])
@@ -139,6 +148,15 @@ class Collection:
     @property
     def shapes(self):
         return self.s
+
+    def get_polyhedron(self):
+        As = []
+        bs = []
+        for s, tf in zip(self.s, self.tf_s):
+            Ai, bi = s.get_polyhedron(tf)
+            As.append(Ai)
+            bs.append(bi)
+        return As, bs
 
     def is_in_collision(self, other, tf_self=None, tf_other=None):
         tf_shapes_self = self.tf_s

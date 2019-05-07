@@ -3,10 +3,13 @@
 """
 Module for sampling based motion planning for path following.
 """
+import time
 import numpy as np
 from .cpp.graph import Graph
-from .path import point_to_frame
+from .path import *
+from pyquaternion import Quaternion
 
+DEBUG = False
 
 def cart_to_joint_simple(robot, path, scene, q_fixed):
     """ cartesian path to joint solutions
@@ -21,10 +24,9 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
     """
     Q = []
     for i, tp in enumerate(path):
-        print('Processing point ' + str(i) + '/' + str(len(path)))
-        for pi in tp.discretise():
+        print('Processing point ' + str(i+1) + '/' + str(len(path)))
+        for Ti in tp.discretise():
             q_sol = []
-            Ti = point_to_frame(pi)
             for qfi in q_fixed:
                 sol = robot.ik(Ti, qfi)
                 if sol['success']:
@@ -37,8 +39,168 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
             Q.append([])
     return Q
 
+class PathPtType:
+    TOL_POS = 0
+    TOL_ORI = 1
+    AXIS = 2
 
-def cart_to_joint_no_redundancy(robot, path, scene):
+def get_new_bounds(l, u, m, red=4):
+    """ TODO reduction of 2 does not reduce interval
+    """
+    delta = abs(u - l) / red
+    l_new = max(m - delta, l)
+    u_new = min(m + delta, u)
+    return l_new, u_new
+
+def resample_trajectory_point(tp, pos_ee, quat):
+    """ create a new trajectory point with smaller bounds
+    """
+    p_new = []
+    for i, val in enumerate(tp.pos):
+        if tp.pos_has_tol[i]:
+            # check for rounding errors on pfk
+            # TODO move this code into toleranced number
+            if pos_ee[i] < val.lower:
+                pos_ee[i] = val.lower
+            if pos_ee[i] > val.upper:
+                pos_ee[i] = val.upper
+            # now calculate new bounds with corrected pkf
+            l, u = get_new_bounds(val.lower, val.upper, pos_ee[i])
+            val_new = TolerancedNumber(l, u, samples=val.num_samples)
+        else:
+            val_new = val
+        p_new.append(val_new)
+    return TolPositionPoint(p_new, quat)
+
+class SolutionPoint:
+    """ class to save intermediate solution info for trajectory point
+    """
+    def __init__(self, tp):
+        self.tp_init = tp
+        self.tp_current = tp
+        self.q_best = None
+        self.jl = []
+
+        self.tol_type = None
+        if isinstance(tp, FreeOrientationPt):
+            self.tol_type = PathPtType.TOL_ORI
+        elif isinstance(tp, TolPositionPoint):
+            self.tol_type = PathPtType.TOL_POS
+        elif isinstance(tp, AxisAnglePt):
+            self.tol_type = PathPtType.AXIS
+        else:
+            raise ValueError("Unkown path point type")
+
+        self.samples = None
+        self.joint_solutions = np.array([])
+        self.num_js = 0
+        # distance of pi / 4 is almost the same as no tolerance
+        self.quat_dist_tol = np.pi / 4
+
+
+    def calc_joint_solutions(self, robot, tp_samples, check_collision=False, scene=None):
+        """ Convert a cartesian trajectory point to joint space """
+        # input validation
+        if check_collision:
+            if scene == None:
+                raise ValueError("scene is needed for collision checking")
+
+        #tp_discrete = self.tp_current.discretise()
+        joint_solutions = []
+        for Ti in tp_samples:
+            sol = robot.ik(Ti)
+            if sol['success']:
+                for qsol in sol['sol']:
+                    if check_collision:
+                        if not robot.is_in_collision(qsol, scene):
+                            joint_solutions.append(qsol)
+                    else:
+                        joint_solutions.append(qsol)
+
+        return np.array(joint_solutions)
+
+    def resample(self, robot, reduction=2):
+        """ Create a toleranced path around the current solution.
+        Reduce the tolerance range by a factor 'reduction'.
+        """
+
+        # calculate forward kinematics for the current solution
+        Tee = robot.fk(self.q_best)
+        pos = [Tee[0, 3], Tee[1, 3], Tee[2, 3]]
+        qee = Quaternion(matrix=Tee)
+
+        if self.tol_type is PathPtType.TOL_ORI:
+            self.tp_current = TolOrientationPt(pos, qee)
+            self.quat_dist_tol = self.quat_dist_tol / reduction
+        elif self.tol_type is PathPtType.TOL_POS:
+            ## create reduced tolerance point
+            self.tp_current = resample_trajectory_point(self.tp_current, pos, qee)
+        elif self.tol_type is PathPtType.AXIS:
+            tp = self.tp_current
+            # assume symmetric bounds around current rotation axis
+            new_tol_angle = TolerancedNumber(
+                tp.angle.lower / 2,
+                tp.angle.upper / 2,
+                samples=tp.angle.num_samples
+            )
+            self.tp_current = AxisAnglePt(pos, qee.axis, new_tol_angle, qee)
+        else:
+            raise ValueError("tolerance type not set.")
+
+    def get_samples(self, num_samples):
+        return self.tp_current.get_samples(num_samples,
+            rep='transform',
+            dist=self.quat_dist_tol)
+
+def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
+    """ cartesian path to joint solutions
+
+    The path tolerance is sampled by tp.discretise inside
+    the TrajectoryPoint class.
+
+    Return array with float32 elements, reducing data size.
+    During graph search c++ floats are used, also float32.
+    """
+    current_path = [SolutionPoint(tp) for tp in path]
+    costs = []
+    paths = []
+    times = []
+
+    for iter in range(max_iters):
+        Q = []
+        time_before = time.time()
+        for i, tp in enumerate(current_path):
+            print('Processing point ' + str(i+1) + '/' + str(len(path)))
+            samples = tp.get_samples(num_samples)
+            Q.append(tp.calc_joint_solutions(robot, samples,
+                check_collision=True,
+                scene=scene).astype('float32'))
+        if np.all([len(qi) for qi in Q]):
+            print('Found collision free configurations for every tp.')
+            sol = get_shortest_path(Q, method='dijkstra')
+            if sol['success']:
+                # save results
+                time_after = time.time()
+                costs.append(sol['length'])
+                paths.append(sol['path'])
+                times.append(time_after - time_before)
+                # resample trajectory
+                for qi, tpi in zip(sol['path'], current_path):
+                    tpi.q_best = qi
+                    tpi.resample(robot)
+            else:
+                print('failed to find shortest path in graph at iter: {}'.format(iter))
+                return {'success': False}
+        else:
+            print('Not every tp has collision free configurations.')
+            return {'success': False}
+
+    sol['costs'] = costs
+    sol['paths'] = paths
+    sol['times'] = times
+    return sol
+
+def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
     """ cartesian path to joint solutions
 
     The path tolerance is sampled by tp.discretise inside
@@ -49,14 +211,20 @@ def cart_to_joint_no_redundancy(robot, path, scene):
     """
     Q = []
     for i, tp in enumerate(path):
-        print('Processing point ' + str(i) + '/' + str(len(path)))
+        print('Processing point ' + str(i+1) + '/' + str(len(path)))
         q_sol = []
-        for Ti in tp.get_samples(1000, rep='transform'):
+        for Ti in tp.get_samples(num_samples, rep='transform'):
             sol = robot.ik(Ti)
             if sol['success']:
                 for qi in sol['sol']:
                     if not robot.is_in_collision(qi, scene):
                         q_sol.append(qi)
+                    else:
+                        if DEBUG:
+                            print("Collision for point: {}".format(Ti[:3, 3]))
+            else:
+                if DEBUG:
+                    print("IK failed for point: {}".format(Ti[:3, 3]))
 
         if len(q_sol) > 0:
             Q.append(np.vstack(q_sol).astype('float32'))
@@ -98,7 +266,7 @@ def cart_to_joint_tool_first_cc(robot, path, scene):
             Q.append([])
     return Q
 
-def get_shortest_path(Q, method='bfs'):
+def get_shortest_path(Q, method='bfs', weights=None):
     """ Calculate the shortest path from joint space data
 
     When the path with trajectory points is converted to joint space,
@@ -132,6 +300,8 @@ def get_shortest_path(Q, method='bfs'):
     n_path = len(Q)
     # initialize graph
     g = Graph()
+    if weights is not None:
+        g.set_weights(weights)
     for c in Q:
         if len(c) == 0:
             # one of the trajectory points is not reachable

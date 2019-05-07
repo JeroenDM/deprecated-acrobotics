@@ -8,7 +8,7 @@
 const float INF = std::numeric_limits<float>::infinity();
 
 /**
- *  Container for a joint position. 
+ *  Container for a joint position.
  * Fixed length container more efficient but less flexible,
  * the length is the number of dofs of the robot, which can vary.
  */
@@ -22,7 +22,7 @@ typedef std::vector<float> joint_value;
 typedef std::vector<std::vector<joint_value>> graph_data;
 
 /**
- *  A graph Node structure. 
+ *  A graph Node structure.
  * Holds a reference to the parant node, a reference to the associated data
  * and other info variables.
  */
@@ -65,11 +65,13 @@ class Graph
     float shortest_path_cost = INF;
     int num_goals_to_visit = 0;
     unsigned int max_path_index = 0;
+    std::vector<float> weights;
 
     void graph_data_to_node_array();
     void reset_node_array();
     void init_unvisited(std::vector<Node *> &uv);
     float cost_function(Node n1, Node n2);
+    float cost_function_2(Node n1, Node n2);
     void visit(Node *node);
     std::vector<Node *> get_neighbors(Node *node);
     std::vector<Node *> get_path_nodes();
@@ -83,6 +85,7 @@ class Graph
 
   public:
     void add_data_column(float *mat, int nrows, int ncols);
+    void set_weights(float *vec_in, int n);
     void print_graph_data();
     void init();
     void reset();

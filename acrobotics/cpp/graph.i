@@ -12,7 +12,7 @@
 %}
 
 // apply numpy typemaps for input stuff
-//%apply (float* IN_ARRAY1, int DIM1) {(float* vec, int n)}
+%apply (float* IN_ARRAY1, int DIM1) {(float* vec_in, int n)}
 // IMPORTANT numpy input array must have dtype = 'float32'
 %apply (float* IN_ARRAY2, int DIM1 , int DIM2){(float* mat, int nrows, int ncols)}
 

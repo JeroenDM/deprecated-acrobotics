@@ -134,6 +134,13 @@ class Robot:
                 if self.collision_matrix[i, j]:
                     if gi.is_in_collision(gj, tf_self=ti, tf_other=tj):
                         return True
+
+        # do not check tool against the last link where it is mounted
+        if self.tool is not None:
+            tf_tool = tf_links[-1]
+            for tf_link, geom_link in zip(tf_links[:-1], geom_links[:-1]):
+                if geom_link.is_in_collision(self.tool, tf_self=tf_link, tf_other=tf_tool):
+                    return True
         return False
 
     def is_in_collision(self, q, collection):
@@ -154,12 +161,10 @@ class Robot:
                 self.collision_priority.insert(0, i)
                 return True 
 
-        # check collision of tool attached to the last link
         if self.tool is not None:
             tf_tool = tf_links[-1]
-            for tf_link, geom_link in zip(tf_links, geom_links):
-                if geom_link.is_in_collision(self.tool, tf_self=tf_link, tf_other=tf_tool):
-                    return True
+            if self.tool.is_in_collision(collection, tf_self=tf_tool):
+                return True
 
         if self.do_check_self_collision:
             if self._check_self_collision(tf_links, geom_links):

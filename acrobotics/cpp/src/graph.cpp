@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm>
+#include <math.h>
 #include <queue>
 #include "graph.h"
 
@@ -47,7 +48,7 @@ void Graph::multi_source_bfs()
         for (Node *nb : neighbors)
         {
             // update neighbors distance
-            float dist = (*current).dist + cost_function(*nb, *current);
+            float dist = (*current).dist + cost_function_2(*nb, *current);
             if (dist < (*nb).dist)
             {
                 (*nb).dist = dist;
@@ -103,7 +104,7 @@ void Graph::multi_source_dijkstra()
         for (Node *nb : neighbors)
         {
             // update neighbors distance
-            float dist = (*current).dist + cost_function(*nb, *current);
+            float dist = (*current).dist + cost_function_2(*nb, *current);
             if (dist < (*nb).dist)
             {
                 (*nb).dist = dist;
@@ -169,7 +170,17 @@ float Graph::cost_function(Node n1, Node n2)
     float cost = 0;
     for (std::size_t i = 0; i < (*n1.jv).size(); ++i)
     {
-        cost += fabs((*n1.jv)[i] - (*n2.jv)[i]);
+        cost += weights[i] * fabs((*n1.jv)[i] - (*n2.jv)[i]);
+    }
+    return cost;
+}
+
+float Graph::cost_function_2(Node n1, Node n2)
+{
+    float cost = 0;
+    for (std::size_t i = 0; i < (*n1.jv).size(); ++i)
+    {
+        cost += weights[i] * std::pow((*n1.jv)[i] - (*n2.jv)[i], 2.0);
     }
     return cost;
 }
@@ -180,7 +191,7 @@ void Graph::visit(Node *n)
     neighbors = get_neighbors(n);
     for (Node *nb : neighbors)
     {
-        float dist = (*n).dist + cost_function(*nb, *n);
+        float dist = (*n).dist + cost_function_2(*nb, *n);
         if (dist < (*nb).dist)
         {
             (*nb).dist = dist;
@@ -249,7 +260,7 @@ float Graph::get_path_cost(std::vector<Node *> &path)
     float cost = 0.0;
     for (std::size_t i = 0; i < path.size() - 1; ++i)
     {
-        cost += cost_function(*path[i], *path[i + 1]);
+        cost += cost_function_2(*path[i], *path[i + 1]);
     }
     return cost;
 }
@@ -285,6 +296,31 @@ void Graph::init()
     std::cout << "Found " << num_goals_to_visit << " goal nodes." << std::endl;
     std::cout << "Index last path point " << max_path_index << std::endl;
     path_found = false;
+    std::size_t ndof = gd[0][0].size();
+    std::cout << "Node data has length: " << ndof << std::endl;
+    if (weights.size() != ndof)
+    {
+      weights.resize(ndof);
+      for (std::size_t i=0; i<ndof; ++i) weights[i] = 1.0;
+      std::cout << "Default initializing weights: ";
+      for (auto el : weights) std::cout << ", " << el;
+      std::cout << std::endl;
+    }
+    else
+    {
+      std::cout << "Received weights from python side: ";
+      for (auto el : weights) std::cout << ", " << el;
+      std::cout << std::endl;
+    }
+}
+
+void Graph::set_weights(float *vec_in, int n)
+{
+    weights.resize(n);
+    for (std::size_t i = 0; i < n; ++i)
+    {
+      weights[i] = vec_in[i];
+    }
 }
 
 void Graph::reset()
