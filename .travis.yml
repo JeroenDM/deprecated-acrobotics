@@ -13,7 +13,7 @@ python:
 addons:
   apt:
     packages:
-    - swig
+    - swig3.0
     - libeigen3-dev
 
 env:
