@@ -2,6 +2,10 @@
    :target: https://acrobotics.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
+.. image:: https://travis-ci.org/JeroenDM/acrobotics.svg?branch=master
+   :target: https://travis-ci.org/JeroenDM/acrobotics
+   :alt: Build Status
+
 Acrobotics
 ==========
 I want to be able to quickly test motion planning ideas, and Python seems like a great language for rapid prototyping. There are great libraries for robot simulation and related task, but installing them is can be a hassle and very dependent on operating system and python version.
