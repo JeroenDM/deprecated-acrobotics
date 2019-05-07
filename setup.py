@@ -18,7 +18,7 @@ setup(
     'for robot arms.'),
     author = 'Jeroen De Maeyer',
     author_email = 'jeroen.demaeyer@kuleuven.be',
-    url = 'todo',
+    url = 'https://github.com/JeroenDM/acrobotics',
     download_url = 'todo',
     keywords = ['robotics', 'motion planning'],
     classifiers = [],

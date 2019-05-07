@@ -236,8 +236,6 @@ std::vector<Node *> Graph::get_path_nodes()
             }
         }
 
-        shortest_path_cost = min_dist;
-
         Node *current_node = goal;
         while ((*current_node).path_index > 0)
         {
@@ -258,9 +256,9 @@ std::vector<Node *> Graph::get_path_nodes()
 float Graph::get_path_cost(std::vector<Node *> &path)
 {
     float cost = 0.0;
-    for (std::size_t i = 0; i < path.size() - 1; ++i)
+    for (std::size_t i = 1; i < path.size(); ++i)
     {
-        cost += cost_function_2(*path[i], *path[i + 1]);
+        cost += cost_function_2(*path[i], *path[i - 1]);
     }
     return cost;
 }
@@ -335,8 +333,8 @@ void Graph::run_bfs()
     std::cout << "Running Breath-first Search " << std::endl;
     multi_source_bfs();
     std::vector<Node *> path = get_path_nodes();
-    float cost = get_path_cost(path);
-    std::cout << "Path found with cost: " << cost << std::endl;
+    shortest_path_cost = get_path_cost(path);
+    std::cout << "Path found with cost: " << shortest_path_cost << std::endl;
 }
 
 void Graph::run_dijkstra()
@@ -344,8 +342,8 @@ void Graph::run_dijkstra()
     std::cout << "Running Dijkstra's algorithm " << std::endl;
     multi_source_dijkstra();
     std::vector<Node *> path = get_path_nodes();
-    float cost = get_path_cost(path);
-    std::cout << "Path found with cost: " << cost << std::endl;
+    shortest_path_cost = get_path_cost(path);
+    std::cout << "Path found with cost: " << shortest_path_cost << std::endl;
     //std::cout << "num_goals_to_visit " << num_goals_to_visit << std::endl;
 }
 
