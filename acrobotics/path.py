@@ -182,20 +182,24 @@ class FreeOrientationPt:
     def __init__(self, position):
         self.p = np.array(position)
 
-    def get_samples(self, num_samples, rep="rpy", dist=None):
+    def get_samples(self, num_samples, dist=None, **kwargs):
         """ Sample orientation (position is fixed)
         """
+        rep = "rpy"
+        if "rep" in kwargs:
+            rep = kwargs["rep"]
+
         if rep == "rpy":
-            rpy = np.array(sample_SO3(n=num_samples, rep=rep))
+            rpy = np.array(sample_SO3(n=num_samples, **kwargs))
             pos = np.tile(self.p, (num_samples, 1))
             return np.hstack((pos, rpy))
         elif rep == "transform":
-            Ts = np.array(sample_SO3(n=num_samples, rep=rep))
+            Ts = np.array(sample_SO3(n=num_samples, **kwargs))
             for Ti in Ts:
                 Ti[:3, 3] = self.p
             return Ts
         elif rep == "quat":
-            return sample_SO3(n=num_samples, rep=rep)
+            return sample_SO3(n=num_samples, **kwargs)
         else:
             raise ValueError("Invalid argument for rep: {}".format(rep))
 
