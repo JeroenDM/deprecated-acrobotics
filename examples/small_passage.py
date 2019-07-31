@@ -33,20 +33,42 @@ obstacles = Collection(shapes, shape_tfs)
 # goal frame to plot tool
 goal_tf = tf_inverse(torch.tf_tt)
 
-# get orientation samples
-tf_samples = path[7].get_samples(100, rep="transform")
+# get orientation samples for each path point
+from acrobotics.pygraph import get_shortest_path
+
+data = []
+for i, tp in enumerate(path):
+    si = tp.get_samples(500, rep="quat")
+    row = []
+    for qi in si:
+        tfi = qi.transformation_matrix @ goal_tf
+        tfi[:-1, -1] = tp.p
+        if not torch.is_in_collision(obstacles, tf_self=tfi):
+            row.append(qi)
+    print("Found {} cc free points for tp {}".format(len(row), i))
+    data.append(row)
+
+sol = get_shortest_path(data)
+print(sol)
+
+# convert to transforms
+sol_tf = []
+for qi, tp in zip(sol["path"], path):
+    sol_tf.append(qi.transformation_matrix)
+    sol_tf[-1][:-1, -1] = tp.p
 
 
 fig, ax = get_default_axes3d()
 plot_reference_frame(ax)
-torch.plot(ax, c="k", tf=goal_tf)
+# torch.plot(ax, c="k", tf=goal_tf)
 obstacles.plot(ax, c="g")
 for tp in path:
     tp.plot(ax)
 
-for tf in tf_samples:
-    tfi = tf @ goal_tf
-    if not torch.is_in_collision(obstacles, tf_self=tfi):
+for i, tf in enumerate(sol_tf):
+    if i % 4 == 0:
+        tfi = tf @ goal_tf
+        # if not torch.is_in_collision(obstacles, tf_self=tfi):
         torch.plot(ax, c="r", tf=tfi)
 
 
