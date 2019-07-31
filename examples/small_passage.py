@@ -36,17 +36,31 @@ goal_tf = tf_inverse(torch.tf_tt)
 # get orientation samples for each path point
 from acrobotics.pygraph import get_shortest_path
 
+
 data = []
+si = path[0].get_samples(200, rep="quat")
+
 for i, tp in enumerate(path):
-    si = tp.get_samples(500, rep="quat")
+    # si = tp.get_samples(100, rep="quat")
     row = []
     for qi in si:
-        tfi = qi.transformation_matrix @ goal_tf
-        tfi[:-1, -1] = tp.p
+        tfi = qi.transformation_matrix
+        tfi[:-1, -1] += tp.p
+        tfi = tfi @ goal_tf
         if not torch.is_in_collision(obstacles, tf_self=tfi):
             row.append(qi)
     print("Found {} cc free points for tp {}".format(len(row), i))
     data.append(row)
+
+
+# samples = path[7].get_samples(200, rep="quat")
+# for s in samples:
+#     tfi = s.transformation_matrix @ goal_tf
+#     tfi[:-1, -1] += path[7].p
+#     # print(tfi)
+#     if not torch.is_in_collision(obstacles, tf_self=tfi):
+#         print("Found collision free tf {}".format(tfi[:-1, -1]))
+
 
 sol = get_shortest_path(data)
 print(sol)
