@@ -10,50 +10,63 @@ pi = np.pi
 
 
 def rot_x(alfa):
-    return np.array([[1, 0, 0],
-                     [0, np.cos(alfa), -np.sin(alfa)],
-                     [0, np.sin(alfa), np.cos(alfa)]])
+    return np.array(
+        [[1, 0, 0], [0, np.cos(alfa), -np.sin(alfa)], [0, np.sin(alfa), np.cos(alfa)]]
+    )
 
 
 def rot_y(alfa):
-    return np.array([[np.cos(alfa), 0, np.sin(alfa)],
-                     [0, 1, 0],
-                     [-np.sin(alfa), 0, np.cos(alfa)]])
+    return np.array(
+        [[np.cos(alfa), 0, np.sin(alfa)], [0, 1, 0], [-np.sin(alfa), 0, np.cos(alfa)]]
+    )
 
 
 def rot_z(alfa):
-    return np.array([[np.cos(alfa), -np.sin(alfa), 0],
-                     [np.sin(alfa), np.cos(alfa), 0],
-                     [0, 0, 1]])
+    return np.array(
+        [[np.cos(alfa), -np.sin(alfa), 0], [np.sin(alfa), np.cos(alfa), 0], [0, 0, 1]]
+    )
 
 
 def translation(x, y, z):
-    return np.array([[1, 0, 0, x],
-                     [0, 1, 0, y],
-                     [0, 0, 1, z],
-                     [0, 0, 0, 1]], dtype='float64')
+    return np.array(
+        [[1, 0, 0, x], [0, 1, 0, y], [0, 0, 1, z], [0, 0, 0, 1]], dtype="float64"
+    )
 
 
 def pose_x(alfa, x, y, z):
     """ Homogenous transform with rotation around x-axis and translation. """
-    return np.array([[1, 0, 0, x],
-                     [0, np.cos(alfa), -np.sin(alfa), y],
-                     [0, np.sin(alfa), np.cos(alfa), z], [0, 0, 0, 1]])
+    return np.array(
+        [
+            [1, 0, 0, x],
+            [0, np.cos(alfa), -np.sin(alfa), y],
+            [0, np.sin(alfa), np.cos(alfa), z],
+            [0, 0, 0, 1],
+        ]
+    )
 
 
 def pose_y(alfa, x, y, z):
     """ Homogenous transform with rotation around y-axis and translation. """
-    return np.array([[np.cos(alfa), 0, np.sin(alfa), x],
-                     [0, 1, 0, y],
-                     [-np.sin(alfa), 0, np.cos(alfa), z],
-                     [0, 0, 0, 1]])
+    return np.array(
+        [
+            [np.cos(alfa), 0, np.sin(alfa), x],
+            [0, 1, 0, y],
+            [-np.sin(alfa), 0, np.cos(alfa), z],
+            [0, 0, 0, 1],
+        ]
+    )
 
 
 def pose_z(alfa, x, y, z):
     """ Homogenous transform with rotation around z-axis and translation. """
-    return np.array([[np.cos(alfa), -np.sin(alfa), 0, x],
-                     [np.sin(alfa), np.cos(alfa), 0, y],
-                     [0, 0, 1, z], [0, 0, 0, 1]])
+    return np.array(
+        [
+            [np.cos(alfa), -np.sin(alfa), 0, x],
+            [np.sin(alfa), np.cos(alfa), 0, y],
+            [0, 0, 1, z],
+            [0, 0, 0, 1],
+        ]
+    )
 
 
 def tf_inverse(T):
@@ -103,6 +116,7 @@ def create_grid(r):
     grid = np.array(grid).T
     return grid
 
+
 # ==============================================================================
 # Plotting
 # ==============================================================================
@@ -114,9 +128,9 @@ def get_default_axes3d(xlim=[-1, 1], ylim=[-1, 1], zlim=[-1, 1]):
     ax.set_xlim3d(xlim)
     ax.set_ylim3d(ylim)
     ax.set_zlim3d(zlim)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
     return fig, ax
 
 
@@ -147,9 +161,10 @@ def plot_reference_frame(ax, tf=None, arrow_length=0.2):
         y_axis = y_axis + tf[:3, 3][:, None]
         z_axis = z_axis + tf[:3, 3][:, None]
 
-    ax.plot(x_axis[0], x_axis[1], x_axis[2], '-', c='r')
-    ax.plot(y_axis[0], y_axis[1], y_axis[2], '-', c='g')
-    ax.plot(z_axis[0], z_axis[1], z_axis[2], '-', c='b')
+    ax.plot(x_axis[0], x_axis[1], x_axis[2], "-", c="r")
+    ax.plot(y_axis[0], y_axis[1], y_axis[2], "-", c="g")
+    ax.plot(z_axis[0], z_axis[1], z_axis[2], "-", c="b")
+
 
 # ==============================================================================
 # SAMPLING METHODS
@@ -181,19 +196,19 @@ def vdc(n, base=2):
 def next_prime():
     def is_prime(num):
         "Checks if num is a prime value"
-        for i in range(2, int(num**0.5)+1):
-            if(num % i) == 0:
+        for i in range(2, int(num ** 0.5) + 1):
+            if (num % i) == 0:
                 return False
         return True
 
     prime = 3
-    while(1):
+    while 1:
         if is_prime(prime):
             yield prime
         prime += 2
 
 
-class HaltonSampler():
+class HaltonSampler:
     def __init__(self, dim):
         self.dim = dim
 
@@ -210,21 +225,21 @@ class HaltonSampler():
         seq = []
         for d in range(self.dim):
             base = self.primes[d]
-            seq.append([vdc(i, base) for i in range(self.cnt, self.cnt+n)])
+            seq.append([vdc(i, base) for i in range(self.cnt, self.cnt + n)])
         self.cnt += n
         return np.array(seq).T
 
 
-def sample_SO3(n=10, rep='quat', method='random'):
+def sample_SO3(n=10, rep="rpy", method="random"):
     """Generate a random unit quaternion.
 
     Uniformly distributed across the rotation space
     As per: http://planning.cs.uiuc.edu/node198.html
     and code from http://kieranwynn.github.io/pyquaternion
     """
-    if method is 'random':
+    if method is "random":
         r1, r2, r3 = np.random.random((3, n))
-    elif method is 'halton':
+    elif method is "halton":
         hs = HaltonSampler(3)
         r1, r2, r3 = (hs.get_samples(n)).T
     else:
@@ -236,9 +251,9 @@ def sample_SO3(n=10, rep='quat', method='random'):
     q4 = np.sqrt(r1) * (np.cos(2 * pi * r3))
 
     result = [Quaternion(q1[i], q2[i], q3[i], q4[i]) for i in range(n)]
-    if rep == 'quat':
+    if rep == "quat":
         return result
-    elif rep == 'transform':
+    elif rep == "transform":
         return [q.transformation_matrix for q in result]
-    elif rep == 'rpy':
+    elif rep == "rpy":
         return [np.array(q.yaw_pitch_roll) for q in result]

@@ -32,6 +32,7 @@ class TolerancedNumber:
     def discretise(self):
         return np.linspace(self.lower, self.upper, self.num_samples)
 
+
 class TolEulerPt:
     """ Path point with fixed orientation and tol on position
     """
@@ -94,7 +95,8 @@ class TolEulerPt:
         return self.get_samples(None)
 
     def plot(self, ax):
-        ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], 'o', c='r')
+        ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], "o", c="r")
+
 
 class TolPositionPoint:
     """ Path point with fixed orientation and tol on position
@@ -142,12 +144,14 @@ class TolPositionPoint:
         return samples
 
     def plot(self, ax):
-        ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], 'o', c='r')
+        ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], "o", c="r")
+
 
 class AxisAnglePt:
     """ Trajectory point that has a tolerance on the end-effector orientation
     given as +/- angle around an axis.
     """
+
     def __init__(self, pos, axis, angle, q_nominal):
         """ angle is toleranced number, the others are fixed
         """
@@ -156,7 +160,7 @@ class AxisAnglePt:
         self.axis = axis
         self.angle = angle
 
-    def get_samples(self, num_samples, rep='transform', dist=None):
+    def get_samples(self, num_samples, rep="transform", dist=None):
         samples = []
         for ai in self.angle.discretise():
             qi = Quaternion(axis=self.axis, angle=ai) * self.quat
@@ -167,7 +171,8 @@ class AxisAnglePt:
         return samples
 
     def plot(self, ax):
-        ax.plot([self.pos[0]], [self.pos[1]], [self.pos[2]], 'o', c='r')
+        ax.plot([self.pos[0]], [self.pos[1]], [self.pos[2]], "o", c="r")
+
 
 class FreeOrientationPt:
     """ Trajectory point with fixed position and free orientation.
@@ -177,18 +182,24 @@ class FreeOrientationPt:
     def __init__(self, position):
         self.p = np.array(position)
 
-    def get_samples(self, num_samples, rep='rpy', dist=None):
+    def get_samples(self, num_samples, dist=None, **kwargs):
         """ Sample orientation (position is fixed)
         """
-        if rep == 'rpy':
-            rpy = np.array(sample_SO3(n=num_samples, rep='rpy'))
+        rep = "rpy"
+        if "rep" in kwargs:
+            rep = kwargs["rep"]
+
+        if rep == "rpy":
+            rpy = np.array(sample_SO3(n=num_samples, **kwargs))
             pos = np.tile(self.p, (num_samples, 1))
             return np.hstack((pos, rpy))
-        elif rep == 'transform':
-            Ts = np.array(sample_SO3(n=num_samples, rep='transform'))
+        elif rep == "transform":
+            Ts = np.array(sample_SO3(n=num_samples, **kwargs))
             for Ti in Ts:
                 Ti[:3, 3] = self.p
             return Ts
+        elif rep == "quat":
+            return sample_SO3(n=num_samples, **kwargs)
         else:
             raise ValueError("Invalid argument for rep: {}".format(rep))
 
@@ -199,7 +210,8 @@ class FreeOrientationPt:
         return str(self.p)
 
     def plot(self, ax):
-        ax.plot([self.p[0]], [self.p[1]], [self.p[2]], 'o', c='r')
+        ax.plot([self.p[0]], [self.p[1]], [self.p[2]], "o", c="r")
+
 
 class TolOrientationPt:
     def __init__(self, position, orientation):
@@ -225,7 +237,8 @@ class TolOrientationPt:
         return str(self.p)
 
     def plot(self, ax):
-        ax.plot([self.p[0]], [self.p[1]], [self.p[2]], 'o', c='r')
+        ax.plot([self.p[0]], [self.p[1]], [self.p[2]], "o", c="r")
+
 
 # =============================================================================
 # Functions
