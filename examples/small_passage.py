@@ -49,7 +49,7 @@ data = []
 # si = path[0].get_samples(200, rep="quat")
 
 for i, tp in enumerate(path):
-    si = tp.get_samples(2000, rep="quat")
+    si = tp.get_samples(500, rep="quat")
     row = []
     for qi in si:
         tfi = qi.transformation_matrix
@@ -62,51 +62,66 @@ for i, tp in enumerate(path):
 
 data = [np.array(d) for d in data]
 
-# print("State data matrices")
-# print([d.shape for d in data])
+print("State data matrices")
+print([d.shape for d in data])
+
+from acrobotics.dp import *
 
 
-costs = []
-for i in range(1, len(data)):
-    ci = data[i - 1] @ data[i].T
+def cost_function(C1, C2):
+    ci = C1 @ C2.T
     ci = np.arccos(np.minimum(np.abs(ci), 1.0))
-    costs.append(ci)
-
-# print("Cost matrices:")
-# print([c.shape for c in costs])
+    return ci
 
 
-# caluclate shortest path
-state_dims = [len(d) for d in data]
-values = [np.zeros(si) for si in state_dims]
-indices = [np.zeros(si, dtype=int) for si in state_dims]
+costs = apply_cost_function(data, cost_function)
 
-print(state_dims)
+# costs = []
+# for i in range(1, len(data)):
+#     ci = data[i - 1] @ data[i].T
+#     ci = np.arccos(np.minimum(np.abs(ci), 1.0))
+#     costs.append(ci)
+#
+print("Cost matrices:")
+print([c.shape for c in costs])
 
-for i in range(len(values) - 2, -1, -1):
-    # print("Iteration: {}".format(i))
-    c_current = costs[i] + values[i + 1]
-    values[i] = np.min(c_current, axis=1)
-    indices[i] = np.argmin(c_current, axis=1)
 
+indices, values = calculate_value_function(costs)
+
+sol = extract_shortest_path(data, indices, values)
+
+#
+# # caluclate shortest path
+# state_dims = [len(d) for d in data]
+# values = [np.zeros(si) for si in state_dims]
+# indices = [np.zeros(si, dtype=int) for si in state_dims]
+#
+# print(state_dims)
+#
+# for i in range(len(values) - 2, -1, -1):
+#     # print("Iteration: {}".format(i))
+#     c_current = costs[i] + values[i + 1]
+#     values[i] = np.min(c_current, axis=1)
+#     indices[i] = np.argmin(c_current, axis=1)
+#
 # for v in values:
 #     print(v)
 # for id in indices:
 #     print(id)
-
-# find shortest path
-sol = []
-i_shortest_dist = np.argmin(values[0])
-sol.append(data[0][i_shortest_dist])
-i_next = int(indices[0][i_shortest_dist])
-
-for i in range(len(data)):
-    sol.append(data[i][i_next])
-    i_next = int(indices[i][i_next])
-
-# print(sol)
-
 #
+# # find shortest path
+# sol = []
+# i_shortest_dist = np.argmin(values[0])
+# sol.append(data[0][i_shortest_dist])
+# i_next = int(indices[0][i_shortest_dist])
+#
+# for i in range(len(data)):
+#     sol.append(data[i][i_next])
+#     i_next = int(indices[i][i_next])
+#
+# # print(sol)
+#
+# #
 # convert to transforms
 sol_tf = []
 for qi, tp in zip(sol, path):
