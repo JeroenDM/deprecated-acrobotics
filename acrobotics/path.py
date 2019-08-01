@@ -103,13 +103,9 @@ class TolEulerPt:
         return tf
 
     def plot(self, ax):
-<<<<<<< HEAD
-        ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], 'o', c='r')
-        plot_reference_frame(ax, tf=self.nominal_transform())
-=======
         ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], "o", c="r")
+        plot_reference_frame(ax, tf=self.nominal_transform())
 
->>>>>>> origin/small-passage-problem
 
 class TolPositionPoint:
     """ Path point with fixed orientation and tol on position
