@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
+from pyquaternion import Quaternion
 
 from acrobotics.resources.torch_model import torch
 from acrobotics.util import get_default_axes3d, plot_reference_frame
@@ -7,6 +8,10 @@ from acrobotics.util import get_default_axes3d, plot_reference_frame
 from acrobotics.path import FreeOrientationPt
 from acrobotics.geometry import Collection, Shape
 from acrobotics.util import tf_inverse
+
+## TODO:
+# is squared cost better than L1 norm,
+# I would expect it is to avoid jumps.
 
 # define path
 path = []
@@ -38,37 +43,74 @@ from acrobotics.pygraph import get_shortest_path
 
 
 data = []
-si = path[0].get_samples(200, rep="quat")
+# notice how having the same orientation samples
+# for all path points we can have a path of length 0
+# if there are no obstacles
+# si = path[0].get_samples(200, rep="quat")
 
 for i, tp in enumerate(path):
-    # si = tp.get_samples(100, rep="quat")
+    si = tp.get_samples(2000, rep="quat")
     row = []
     for qi in si:
         tfi = qi.transformation_matrix
         tfi[:-1, -1] += tp.p
         tfi = tfi @ goal_tf
         if not torch.is_in_collision(obstacles, tf_self=tfi):
-            row.append(qi)
+            row.append(qi.q)
     print("Found {} cc free points for tp {}".format(len(row), i))
     data.append(row)
 
+data = [np.array(d) for d in data]
 
-# samples = path[7].get_samples(200, rep="quat")
-# for s in samples:
-#     tfi = s.transformation_matrix @ goal_tf
-#     tfi[:-1, -1] += path[7].p
-#     # print(tfi)
-#     if not torch.is_in_collision(obstacles, tf_self=tfi):
-#         print("Found collision free tf {}".format(tfi[:-1, -1]))
+# print("State data matrices")
+# print([d.shape for d in data])
 
 
-sol = get_shortest_path(data)
-print(sol)
+costs = []
+for i in range(1, len(data)):
+    ci = data[i - 1] @ data[i].T
+    ci = np.arccos(np.minimum(np.abs(ci), 1.0))
+    costs.append(ci)
 
+# print("Cost matrices:")
+# print([c.shape for c in costs])
+
+
+# caluclate shortest path
+state_dims = [len(d) for d in data]
+values = [np.zeros(si) for si in state_dims]
+indices = [np.zeros(si, dtype=int) for si in state_dims]
+
+print(state_dims)
+
+for i in range(len(values) - 2, -1, -1):
+    # print("Iteration: {}".format(i))
+    c_current = costs[i] + values[i + 1]
+    values[i] = np.min(c_current, axis=1)
+    indices[i] = np.argmin(c_current, axis=1)
+
+# for v in values:
+#     print(v)
+# for id in indices:
+#     print(id)
+
+# find shortest path
+sol = []
+i_shortest_dist = np.argmin(values[0])
+sol.append(data[0][i_shortest_dist])
+i_next = int(indices[0][i_shortest_dist])
+
+for i in range(len(data)):
+    sol.append(data[i][i_next])
+    i_next = int(indices[i][i_next])
+
+# print(sol)
+
+#
 # convert to transforms
 sol_tf = []
-for qi, tp in zip(sol["path"], path):
-    sol_tf.append(qi.transformation_matrix)
+for qi, tp in zip(sol, path):
+    sol_tf.append(Quaternion(qi).transformation_matrix)
     sol_tf[-1][:-1, -1] = tp.p
 
 

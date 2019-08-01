@@ -13,8 +13,12 @@ from pyquaternion import Quaternion
 #     return np.sum(np.abs(node1.data - node2.data))
 
 
+# def cost_function(node1, node2):
+#     return Quaternion.distance(node1.data, node2.data)
+
+
 def cost_function(node1, node2):
-    return Quaternion.distance(node1.data, node2.data)
+    return np.arccos(min(np.abs((node1.data @ node2.data)), 1.0))
 
 
 class Node:
