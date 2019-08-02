@@ -46,4 +46,4 @@ install:
 - python setup.py install
 
 script:
-- pytest $PACKAGENAME
+- pytest
