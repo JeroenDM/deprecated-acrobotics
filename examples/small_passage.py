@@ -8,6 +8,7 @@ from acrobotics.util import get_default_axes3d, plot_reference_frame
 from acrobotics.path import FreeOrientationPt
 from acrobotics.geometry import Collection, Shape
 from acrobotics.util import tf_inverse
+from acrobotics.dp import *
 
 ## TODO:
 # is squared cost better than L1 norm,
@@ -38,18 +39,17 @@ obstacles = Collection(shapes, shape_tfs)
 # goal frame to plot tool
 goal_tf = tf_inverse(torch.tf_tt)
 
-# get orientation samples for each path point
-from acrobotics.pygraph import get_shortest_path
-
-
 data = []
 # notice how having the same orientation samples
 # for all path points we can have a path of length 0
 # if there are no obstacles
-# si = path[0].get_samples(200, rep="quat")
+# and even if there are obstacles
+# => there is potentially a very fast way to solve this problem
+# using a convex of of the start and end point
+si = path[0].get_samples(2000, rep="quat")
 
 for i, tp in enumerate(path):
-    si = tp.get_samples(500, rep="quat")
+    # si = tp.get_samples(2000, rep="quat")
     row = []
     for qi in si:
         tfi = qi.transformation_matrix
@@ -62,66 +62,37 @@ for i, tp in enumerate(path):
 
 data = [np.array(d) for d in data]
 
-print("State data matrices")
-print([d.shape for d in data])
-
-from acrobotics.dp import *
-
 
 def cost_function(C1, C2):
+    """ Input size should be N x 4.
+    N is the number of points to compare, 4 is the number of quaternion elements
+    for this cost functions.
+    """
     ci = C1 @ C2.T
     ci = np.arccos(np.minimum(np.abs(ci), 1.0))
     return ci
 
 
-costs = apply_cost_function(data, cost_function)
+def cost_function_2(C1, C2):
+    """ Alternative cost functions that also takes into account the distance
+    from a given goal orientation.
+    """
+    q_ref = Quaternion(axis=[0, 1, 0], angle=1.5).q
+    C_ref = np.tile(q_ref, (len(C2), 1))
+    ci = C1 @ C2.T
+    path_cost = np.arccos(np.minimum(np.abs(ci), 1.0))
 
-# costs = []
-# for i in range(1, len(data)):
-#     ci = data[i - 1] @ data[i].T
-#     ci = np.arccos(np.minimum(np.abs(ci), 1.0))
-#     costs.append(ci)
-#
-print("Cost matrices:")
-print([c.shape for c in costs])
+    path_cost[path_cost > 0.2] = np.inf
+
+    cj = C1 @ C_ref.T
+    state_cost = np.arccos(np.minimum(np.abs(cj), 1.0))
+    return path_cost ** 2 + 0.5 * state_cost ** 2
 
 
+costs = apply_cost_function(data, cost_function_2)
 indices, values = calculate_value_function(costs)
-
 sol = extract_shortest_path(data, indices, values)
 
-#
-# # caluclate shortest path
-# state_dims = [len(d) for d in data]
-# values = [np.zeros(si) for si in state_dims]
-# indices = [np.zeros(si, dtype=int) for si in state_dims]
-#
-# print(state_dims)
-#
-# for i in range(len(values) - 2, -1, -1):
-#     # print("Iteration: {}".format(i))
-#     c_current = costs[i] + values[i + 1]
-#     values[i] = np.min(c_current, axis=1)
-#     indices[i] = np.argmin(c_current, axis=1)
-#
-# for v in values:
-#     print(v)
-# for id in indices:
-#     print(id)
-#
-# # find shortest path
-# sol = []
-# i_shortest_dist = np.argmin(values[0])
-# sol.append(data[0][i_shortest_dist])
-# i_next = int(indices[0][i_shortest_dist])
-#
-# for i in range(len(data)):
-#     sol.append(data[i][i_next])
-#     i_next = int(indices[i][i_next])
-#
-# # print(sol)
-#
-# #
 # convert to transforms
 sol_tf = []
 for qi, tp in zip(sol, path):
@@ -137,10 +108,9 @@ for tp in path:
     tp.plot(ax)
 
 for i, tf in enumerate(sol_tf):
-    if i % 4 == 0:
+    if i % 2 == 0:
         tfi = tf @ goal_tf
         # if not torch.is_in_collision(obstacles, tf_self=tfi):
         torch.plot(ax, c="r", tf=tfi)
-
 
 fig.show()

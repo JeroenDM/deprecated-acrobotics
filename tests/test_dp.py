@@ -20,7 +20,7 @@ def test_calculate_value_function():
         np.array([0.0]),
     ]
 
-    v_ind_exact = [[0], [0, 0, 0], [0, 0, 0], [0, 0], [0]]
+    v_ind_exact = [[0], [0, 0, 0], [0, 0, 1], [0, 0], [0]]
 
     print(v)
     assert len(v) == len(v_exact)
