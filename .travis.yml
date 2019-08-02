@@ -15,7 +15,7 @@ python:
 addons:
   apt:
     packages:
-    - swig3.0
+    - swig
     - libeigen3-dev
 
 env:
@@ -29,8 +29,6 @@ env:
 
 before_install:
 # Here we download miniconda and install the dependencies
-- swig3.0 -version
-- ln -s swig3.0 swig
 - export MINICONDA=$HOME/miniconda
 - export PATH="$MINICONDA/bin:$PATH"
 - hash -r
