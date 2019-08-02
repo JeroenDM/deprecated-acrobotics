@@ -30,7 +30,7 @@ env:
 before_install:
 # Here we download miniconda and install the dependencies
 - swig3.0 -version
-- ln -s /usr/bin/swig3.0 /usr/bin/swig
+- ln -s swig3.0 swig
 - export MINICONDA=$HOME/miniconda
 - export PATH="$MINICONDA/bin:$PATH"
 - hash -r
