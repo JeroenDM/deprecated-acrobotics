@@ -29,6 +29,7 @@ env:
 
 before_install:
 # Here we download miniconda and install the dependencies
+- swig -version
 - export MINICONDA=$HOME/miniconda
 - export PATH="$MINICONDA/bin:$PATH"
 - hash -r
