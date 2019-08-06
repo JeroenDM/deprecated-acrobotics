@@ -53,6 +53,7 @@ def simple_graph():
 
 def test_apply_cost_function(simple_graph):
     def f(d1, d2):
+        """L1 norm cost function. """
         ci = np.zeros((len(d1), len(d2)))
         for i in range(len(d1)):
             for j in range(len(d2)):

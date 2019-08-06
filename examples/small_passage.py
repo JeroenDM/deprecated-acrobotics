@@ -46,10 +46,10 @@ data = []
 # and even if there are obstacles
 # => there is potentially a very fast way to solve this problem
 # using a convex of of the start and end point
-si = path[0].get_samples(2000, rep="quat")
+# si = path[0].get_samples(2000, rep="quat")
 
 for i, tp in enumerate(path):
-    # si = tp.get_samples(2000, rep="quat")
+    si = tp.get_samples(2000, rep="quat")
     row = []
     for qi in si:
         tfi = qi.transformation_matrix
@@ -82,14 +82,14 @@ def cost_function_2(C1, C2):
     ci = C1 @ C2.T
     path_cost = np.arccos(np.minimum(np.abs(ci), 1.0))
 
-    path_cost[path_cost > 0.2] = np.inf
+    # path_cost[path_cost > 0.2] = np.inf
 
     cj = C1 @ C_ref.T
     state_cost = np.arccos(np.minimum(np.abs(cj), 1.0))
     return path_cost ** 2 + 0.5 * state_cost ** 2
 
 
-costs = apply_cost_function(data, cost_function_2)
+costs = apply_cost_function(data, cost_function)
 indices, values = calculate_value_function(costs)
 sol = extract_shortest_path(data, indices, values)
 
@@ -100,17 +100,33 @@ for qi, tp in zip(sol, path):
     sol_tf[-1][:-1, -1] = tp.p
 
 
-fig, ax = get_default_axes3d()
-plot_reference_frame(ax)
-# torch.plot(ax, c="k", tf=goal_tf)
-obstacles.plot(ax, c="g")
-for tp in path:
-    tp.plot(ax)
+import matplotlib.pyplot as plt
 
-for i, tf in enumerate(sol_tf):
-    if i % 2 == 0:
-        tfi = tf @ goal_tf
-        # if not torch.is_in_collision(obstacles, tf_self=tfi):
-        torch.plot(ax, c="r", tf=tfi)
+# plt.matshow(costs[0])
+# plt.show()
 
-fig.show()
+leg = []
+i = 0
+for v in values:
+    t = np.linspace(0, 1, len(v))
+    # plt.plot(t, np.sort(v))
+    plt.plot(t, v)
+    leg.append(i)
+    i += 1
+plt.legend(leg)
+plt.show()
+
+# fig, ax = get_default_axes3d()
+# plot_reference_frame(ax)
+# # torch.plot(ax, c="k", tf=goal_tf)
+# obstacles.plot(ax, c="g")
+# for tp in path:
+#     tp.plot(ax)
+#
+# for i, tf in enumerate(sol_tf):
+#     if i % 2 == 0:
+#         tfi = tf @ goal_tf
+#         # if not torch.is_in_collision(obstacles, tf_self=tfi):
+#         torch.plot(ax, c="r", tf=tfi)
+#
+# fig.show()
