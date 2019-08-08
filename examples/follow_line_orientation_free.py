@@ -3,35 +3,22 @@
 import numpy as np
 from acrobotics.util import get_default_axes3d
 from acrobotics.resources.robots import Kuka
-from acrobotics.path import FreeOrientationPt
-from acrobotics.geometry import Shape, Collection
+from acrobotics.io import load_task, load_settings
 
 robot = Kuka()
-
-path = []
-for s in np.linspace(0, 1, 10):
-    xi = 0.8
-    yi = s * 0.2 + (1 - s) * (-0.2)
-    zi = 0.2
-    path.append(FreeOrientationPt([xi, yi, zi]))
-
-floor_plane = Shape(0.5, 0.5, 0.1)
-floor_plane_tf = np.array(
-    [[1, 0, 0, 0.80], [0, 1, 0, 0.00], [0, 0, 1, 0.12], [0, 0, 0, 1]]
-)
-
-scene = Collection([floor_plane], [floor_plane_tf])
+path, scene = load_task("examples/line_orient_free.json")
+settings = load_settings("examples/planner_settings_simple.json")
 
 #%% PLAN PATH
 from acrobotics.planning import cart_to_joint_no_redundancy
 from acrobotics.planning import get_shortest_path
 
-Q = cart_to_joint_no_redundancy(robot, path, scene, num_samples=200)
+Q = cart_to_joint_no_redundancy(robot, path, scene, num_samples=settings["num_samples"])
 
 print([len(qi) for qi in Q])
 qp = [qi[0] for qi in Q]
 
-res = get_shortest_path(Q, method="dijkstra")
+res = get_shortest_path(Q, method=settings["graph_search_method"])
 print(res)
 qp_sol = res["path"]
 
