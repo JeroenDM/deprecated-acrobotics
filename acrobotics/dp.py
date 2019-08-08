@@ -37,3 +37,12 @@ def extract_shortest_path(data, V_ind, V):
         i_next = V_ind[i_stage][i_next]
 
     return res
+
+
+def shortest_path(Q, cost_function):
+    costs = apply_cost_function(Q, cost_function)
+    actions, values = calculate_value_function(costs)
+
+    path = extract_shortest_path(Q, actions, values)
+    path_length = np.min(values[0])
+    return {"success": True, "path": path, "length": path_length}

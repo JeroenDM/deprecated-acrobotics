@@ -11,6 +11,7 @@ from pyquaternion import Quaternion
 
 DEBUG = False
 
+
 def cart_to_joint_simple(robot, path, scene, q_fixed):
     """ cartesian path to joint solutions
 
@@ -24,25 +25,27 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
     """
     Q = []
     for i, tp in enumerate(path):
-        print('Processing point ' + str(i+1) + '/' + str(len(path)))
+        print("Processing point " + str(i + 1) + "/" + str(len(path)))
         for Ti in tp.discretise():
             q_sol = []
             for qfi in q_fixed:
                 sol = robot.ik(Ti, qfi)
-                if sol['success']:
-                    for qi in sol['sol']:
+                if sol["success"]:
+                    for qi in sol["sol"]:
                         if not robot.is_in_collision(qi, scene):
                             q_sol.append(qi)
         if len(q_sol) > 0:
-            Q.append(np.vstack(q_sol).astype('float32'))
+            Q.append(np.vstack(q_sol).astype("float32"))
         else:
             Q.append([])
     return Q
+
 
 class PathPtType:
     TOL_POS = 0
     TOL_ORI = 1
     AXIS = 2
+
 
 def get_new_bounds(l, u, m, red=4):
     """ TODO reduction of 2 does not reduce interval
@@ -51,6 +54,7 @@ def get_new_bounds(l, u, m, red=4):
     l_new = max(m - delta, l)
     u_new = min(m + delta, u)
     return l_new, u_new
+
 
 def resample_trajectory_point(tp, pos_ee, quat):
     """ create a new trajectory point with smaller bounds
@@ -72,9 +76,11 @@ def resample_trajectory_point(tp, pos_ee, quat):
         p_new.append(val_new)
     return TolPositionPoint(p_new, quat)
 
+
 class SolutionPoint:
     """ class to save intermediate solution info for trajectory point
     """
+
     def __init__(self, tp):
         self.tp_init = tp
         self.tp_current = tp
@@ -97,20 +103,21 @@ class SolutionPoint:
         # distance of pi / 4 is almost the same as no tolerance
         self.quat_dist_tol = np.pi / 4
 
-
-    def calc_joint_solutions(self, robot, tp_samples, check_collision=False, scene=None):
+    def calc_joint_solutions(
+        self, robot, tp_samples, check_collision=False, scene=None
+    ):
         """ Convert a cartesian trajectory point to joint space """
         # input validation
         if check_collision:
             if scene == None:
                 raise ValueError("scene is needed for collision checking")
 
-        #tp_discrete = self.tp_current.discretise()
+        # tp_discrete = self.tp_current.discretise()
         joint_solutions = []
         for Ti in tp_samples:
             sol = robot.ik(Ti)
-            if sol['success']:
-                for qsol in sol['sol']:
+            if sol["success"]:
+                for qsol in sol["sol"]:
                     if check_collision:
                         if not robot.is_in_collision(qsol, scene):
                             joint_solutions.append(qsol)
@@ -139,18 +146,17 @@ class SolutionPoint:
             tp = self.tp_current
             # assume symmetric bounds around current rotation axis
             new_tol_angle = TolerancedNumber(
-                tp.angle.lower / 2,
-                tp.angle.upper / 2,
-                samples=tp.angle.num_samples
+                tp.angle.lower / 2, tp.angle.upper / 2, samples=tp.angle.num_samples
             )
             self.tp_current = AxisAnglePt(pos, qee.axis, new_tol_angle, qee)
         else:
             raise ValueError("tolerance type not set.")
 
     def get_samples(self, num_samples):
-        return self.tp_current.get_samples(num_samples,
-            rep='transform',
-            dist=self.quat_dist_tol)
+        return self.tp_current.get_samples(
+            num_samples, rep="transform", dist=self.quat_dist_tol
+        )
+
 
 def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
     """ cartesian path to joint solutions
@@ -170,35 +176,38 @@ def cart_to_joint_iterative(robot, path, scene, num_samples=1000, max_iters=3):
         Q = []
         time_before = time.time()
         for i, tp in enumerate(current_path):
-            print('Processing point ' + str(i+1) + '/' + str(len(path)))
+            print("Processing point " + str(i + 1) + "/" + str(len(path)))
             samples = tp.get_samples(num_samples)
-            Q.append(tp.calc_joint_solutions(robot, samples,
-                check_collision=True,
-                scene=scene).astype('float32'))
+            Q.append(
+                tp.calc_joint_solutions(
+                    robot, samples, check_collision=True, scene=scene
+                ).astype("float32")
+            )
         if np.all([len(qi) for qi in Q]):
-            print('Found collision free configurations for every tp.')
-            sol = get_shortest_path(Q, method='dijkstra')
-            if sol['success']:
+            print("Found collision free configurations for every tp.")
+            sol = get_shortest_path(Q, method="dijkstra")
+            if sol["success"]:
                 # save results
                 time_after = time.time()
-                costs.append(sol['length'])
-                paths.append(sol['path'])
+                costs.append(sol["length"])
+                paths.append(sol["path"])
                 times.append(time_after - time_before)
                 # resample trajectory
-                for qi, tpi in zip(sol['path'], current_path):
+                for qi, tpi in zip(sol["path"], current_path):
                     tpi.q_best = qi
                     tpi.resample(robot)
             else:
-                print('failed to find shortest path in graph at iter: {}'.format(iter))
-                return {'success': False}
+                print("failed to find shortest path in graph at iter: {}".format(iter))
+                return {"success": False}
         else:
-            print('Not every tp has collision free configurations.')
-            return {'success': False}
+            print("Not every tp has collision free configurations.")
+            return {"success": False}
 
-    sol['costs'] = costs
-    sol['paths'] = paths
-    sol['times'] = times
+    sol["costs"] = costs
+    sol["paths"] = paths
+    sol["times"] = times
     return sol
+
 
 def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
     """ cartesian path to joint solutions
@@ -211,12 +220,12 @@ def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
     """
     Q = []
     for i, tp in enumerate(path):
-        print('Processing point ' + str(i+1) + '/' + str(len(path)))
+        print("Processing point " + str(i + 1) + "/" + str(len(path)))
         q_sol = []
-        for Ti in tp.get_samples(num_samples, rep='transform'):
+        for Ti in tp.get_samples(num_samples, rep="transform"):
             sol = robot.ik(Ti)
-            if sol['success']:
-                for qi in sol['sol']:
+            if sol["success"]:
+                for qi in sol["sol"]:
                     if not robot.is_in_collision(qi, scene):
                         q_sol.append(qi)
                     else:
@@ -227,7 +236,7 @@ def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
                     print("IK failed for point: {}".format(Ti[:3, 3]))
 
         if len(q_sol) > 0:
-            Q.append(np.vstack(q_sol).astype('float32'))
+            Q.append(np.vstack(q_sol).astype("float32"))
         else:
             Q.append([])
     return Q
@@ -246,27 +255,28 @@ def cart_to_joint_tool_first_cc(robot, path, scene):
     tf_move = np.eye(4)
     Q = []
     for i, tp in enumerate(path):
-        print('Processing point ' + str(i) + '/' + str(len(path)))
+        print("Processing point " + str(i) + "/" + str(len(path)))
         q_sol = []
-        for Ti in tp.get_samples(1000, rep='transform'):
+        for Ti in tp.get_samples(1000, rep="transform"):
             # move last link to Ti and check for collision
             tf_move = np.dot(tf_last_link, Ti)
             shape_last_link.set_transform(tf_move)
             if shape_last_link.is_in_collision_multi(scene.get_shapes()):
-               continue
+                continue
             sol = robot.ik(Ti)
-            if sol['success']:
-                for qi in sol['sol']:
+            if sol["success"]:
+                for qi in sol["sol"]:
                     if not robot.is_in_collision(qi, scene):
                         q_sol.append(qi)
 
         if len(q_sol) > 0:
-            Q.append(np.vstack(q_sol).astype('float32'))
+            Q.append(np.vstack(q_sol).astype("float32"))
         else:
             Q.append([])
     return Q
 
-def get_shortest_path(Q, method='bfs', weights=None):
+
+def get_shortest_path(Q, method="bfs", weights=None):
     """ Calculate the shortest path from joint space data
 
     When the path with trajectory points is converted to joint space,
@@ -305,18 +315,17 @@ def get_shortest_path(Q, method='bfs', weights=None):
     for c in Q:
         if len(c) == 0:
             # one of the trajectory points is not reachable
-            return {'success': False}
+            return {"success": False}
         g.add_data_column(c)
     g.init()
 
     # run shortest path algorithm
-    if method == 'bfs':
+    if method == "bfs":
         g.run_bfs()
-    elif method == 'dijkstra':
+    elif method == "dijkstra":
         g.run_dijkstra()
     else:
-        raise NotImplementedError(
-            'The method {} is not implented yet.'.format(method))
+        raise NotImplementedError("The method {} is not implented yet.".format(method))
     # print result
     # g.print_graph()
     g.print_path()
@@ -326,15 +335,15 @@ def get_shortest_path(Q, method='bfs', weights=None):
     cost = g.get_path_cost()
 
     if p_i[0] == -1:
-        return {'success': False}
+        return {"success": False}
     else:
         res = []
         for k, i in zip(range(n_path), p_i):
             # TODO ugly all the "unsave" typecasting
-            qki = Q[k][i].astype('float64')
+            qki = Q[k][i].astype("float64")
             res.append(qki)
 
-        return {'success': True, 'path': res, 'length': cost}
+        return {"success": True, "path": res, "length": cost}
 
 
 def _check_dtype(Q):
@@ -352,9 +361,9 @@ def _check_dtype(Q):
     -------
     list of nympy.ndarrays of float32
     """
-    if Q[0].dtype != 'float32':
+    if Q[0].dtype != "float32":
         print("converting type of Q")
         for i in range(len(Q)):
-            Q[i] = Q[i].astype('float32')
+            Q[i] = Q[i].astype("float32")
 
     return Q

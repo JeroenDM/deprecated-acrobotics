@@ -89,44 +89,44 @@ def cost_function_2(C1, C2):
     return path_cost ** 2 + 0.5 * state_cost ** 2
 
 
-costs = apply_cost_function(data, cost_function)
-indices, values = calculate_value_function(costs)
-sol = extract_shortest_path(data, indices, values)
+# costs = apply_cost_function(data, cost_function)
+# indices, values = calculate_value_function(costs)
+# sol = extract_shortest_path(data, indices, values)
+sol = shortest_path(data, cost_function)
 
 # convert to transforms
 sol_tf = []
-for qi, tp in zip(sol, path):
+for qi, tp in zip(sol["path"], path):
     sol_tf.append(Quaternion(qi).transformation_matrix)
     sol_tf[-1][:-1, -1] = tp.p
 
 
-import matplotlib.pyplot as plt
-
+# import matplotlib.pyplot as plt
 # plt.matshow(costs[0])
 # plt.show()
 
-leg = []
-i = 0
-for v in values:
-    t = np.linspace(0, 1, len(v))
-    # plt.plot(t, np.sort(v))
-    plt.plot(t, v)
-    leg.append(i)
-    i += 1
-plt.legend(leg)
-plt.show()
+# leg = []
+# i = 0
+# for v in values:
+#     t = np.linspace(0, 1, len(v))
+#     # plt.plot(t, np.sort(v))
+#     plt.plot(t, v)
+#     leg.append(i)
+#     i += 1
+# plt.legend(leg)
+# plt.show()
 
-# fig, ax = get_default_axes3d()
-# plot_reference_frame(ax)
-# # torch.plot(ax, c="k", tf=goal_tf)
-# obstacles.plot(ax, c="g")
-# for tp in path:
-#     tp.plot(ax)
-#
-# for i, tf in enumerate(sol_tf):
-#     if i % 2 == 0:
-#         tfi = tf @ goal_tf
-#         # if not torch.is_in_collision(obstacles, tf_self=tfi):
-#         torch.plot(ax, c="r", tf=tfi)
-#
-# fig.show()
+fig, ax = get_default_axes3d()
+plot_reference_frame(ax)
+# torch.plot(ax, c="k", tf=goal_tf)
+obstacles.plot(ax, c="g")
+for tp in path:
+    tp.plot(ax)
+
+for i, tf in enumerate(sol_tf):
+    if i % 2 == 0:
+        tfi = tf @ goal_tf
+        # if not torch.is_in_collision(obstacles, tf_self=tfi):
+        torch.plot(ax, c="r", tf=tfi)
+
+fig.show()
