@@ -4,37 +4,14 @@ from pyquaternion import Quaternion
 
 from acrobotics.resources.torch_model import torch
 from acrobotics.util import get_default_axes3d, plot_reference_frame
-
-from acrobotics.path import FreeOrientationPt
-from acrobotics.geometry import Collection, Shape
 from acrobotics.util import tf_inverse
 from acrobotics.dp import *
+from acrobotics.io import load_task
 
 ## TODO:
 # is squared cost better than L1 norm,
 # I would expect it is to avoid jumps.
-
-# define path
-path = []
-Np = 15
-yr = np.linspace(-0.1, 0.1, Np)
-for i in range(Np):
-    x, y, z = 0.0, yr[i], 0.0
-    path.append(FreeOrientationPt([x, y, z]))
-
-# define obstacles
-gap = 0.005
-offset = (0.025 + 0.1) / 2 + gap
-shapes = [
-    Shape(0.1, 0.03, 0.2),
-    Shape(0.1, 0.03, 0.2),
-    Shape(0.025 + 2 * gap, 0.03, 0.1),
-]
-shape_tfs = [np.eye(4), np.eye(4), np.eye(4)]
-shape_tfs[0][:-1, -1] = np.array([-offset, 0, 0])
-shape_tfs[1][:-1, -1] = np.array([offset, 0, 0])
-shape_tfs[2][:-1, -1] = np.array([0, 0, 0.05])
-obstacles = Collection(shapes, shape_tfs)
+path, obstacles = load_task("examples/small_passage.json")
 
 # goal frame to plot tool
 goal_tf = tf_inverse(torch.tf_tt)
@@ -49,7 +26,7 @@ data = []
 # si = path[0].get_samples(2000, rep="quat")
 
 for i, tp in enumerate(path):
-    si = tp.get_samples(2000, rep="quat")
+    si = tp.get_samples(1000, rep="quat")
     row = []
     for qi in si:
         tfi = qi.transformation_matrix

@@ -7,8 +7,12 @@ test_data = """{
   {
     "type" : "LINE",
     "tolerance" : "orientation_free",
-    "p1" : [0.8, -0.2, 0.2],
-    "p2" : [0.8, 0.2, 0.2],
+    "start_pose" :
+    {
+      "xyz" : [0.8, -0.2, 0.2],
+      "rpy" : [0.0, 0.0, 0.0]
+    },
+    "end_point" : [0.8, 0.2, 0.2],
     "num_points" : 10
   },
   "obstacles" :

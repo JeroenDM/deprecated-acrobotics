@@ -3,14 +3,35 @@ Fucntions to load tasks and other settings from json files.
 """
 import json
 import numpy as np
+from numpy.linalg import norm
 
 from .geometry import Shape, Collection
 from .path import FreeOrientationPt
 from .util import rot_x, rot_y, rot_z
 
 
-def create_line(p1, p2, num_points):
-    return np.linspace(np.array(p1), np.array(p2), num_points)
+def create_transform(xyz, rpy):
+    tf = np.eye(4)
+    tf[:3, 3] = np.array(xyz)
+    tf[:3, :3] = rot_x(rpy[0]) @ rot_y(rpy[1]) @ rot_z(rpy[2])
+    return tf
+
+
+def create_line(start_pose, end_point, num_points):
+    return np.linspace(np.array(start_pose["xyz"]), np.array(end_point), num_points)
+
+
+def create_circle(mid, start, axis, num_points):
+    e = axis / norm(axis)
+    c = np.array(mid)
+    v = np.array(start) - c
+    angle = np.linspace(0, 2 * np.pi, num_points)
+    pos = []
+    for a in angle:
+        v_rot = np.cos(a) * v + np.sin(a) * np.cross(e, v)
+        v_rot = v_rot + (1 - np.cos(a)) * (e @ v) * e
+        pos.append(c + v_rot)
+    return np.array(pos)
 
 
 def create_orientation_free_path(pos):
@@ -21,10 +42,12 @@ def parse_path(d):
     pd = d["path"]
 
     if pd["type"] == "LINE":
-        pos = create_line(pd["p1"], pd["p2"], pd["num_points"])
+        pos = create_line(pd["start_pose"], pd["end_point"], pd["num_points"])
+    elif pd["type"] == "CIRC":
+        pos = create_circle(pd["mid"], pd["start"], pd["axis"], pd["num_points"])
     else:
         msg = "Unkown path type: '{}'\n".format(pd["type"])
-        msg += "Options are: {}\n".format(["LINE"])
+        msg += "Options are: {}\n".format(["LINE", "CIRC"])
         raise Exception(msg)
 
     if pd["tolerance"] == "orientation_free":
@@ -35,13 +58,6 @@ def parse_path(d):
         raise Exception(msg)
 
     return path
-
-
-def create_transform(xyz, rpy):
-    tf = np.eye(4)
-    tf[:3, 3] = np.array(xyz)
-    tf[:3, :3] = rot_x(rpy[0]) @ rot_y(rpy[1]) @ rot_z(rpy[2])
-    return tf
 
 
 def create_box(d):
