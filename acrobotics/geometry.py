@@ -1,10 +1,14 @@
 import numpy as np
+from collections import namedtuple
 import fcl
 
 
 def tf_apply(tf, vector):
     """ Transform a vector with a homogeneous transform matrix tf. """
     return np.dot(tf[:3, :3], vector) + tf[:3, 3]
+
+
+Polyhedron = namedtuple("Polyhedron", ["A", "b"])
 
 
 class Shape:
@@ -33,14 +37,14 @@ class Shape:
         b = self.dy / 2
         c = self.dz / 2
 
-        v[0] = tf_apply(tf, [-a,  b,  c])
-        v[1] = tf_apply(tf, [-a,  b, -c])
-        v[2] = tf_apply(tf, [-a, -b,  c])
+        v[0] = tf_apply(tf, [-a, b, c])
+        v[1] = tf_apply(tf, [-a, b, -c])
+        v[2] = tf_apply(tf, [-a, -b, c])
         v[3] = tf_apply(tf, [-a, -b, -c])
 
-        v[4] = tf_apply(tf, [a,  b,  c])
-        v[5] = tf_apply(tf, [a,  b, -c])
-        v[6] = tf_apply(tf, [a, -b,  c])
+        v[4] = tf_apply(tf, [a, b, c])
+        v[5] = tf_apply(tf, [a, b, -c])
+        v[6] = tf_apply(tf, [a, -b, c])
         v[7] = tf_apply(tf, [a, -b, -c])
         return v
 
@@ -66,22 +70,20 @@ class Shape:
     def get_normals(self, tf):
         n = np.zeros((6, 3))
         R = tf[:3, :3]
-        n[0] = np.dot(R, [ 1,  0,  0])
-        n[1] = np.dot(R, [-1,  0,  0])
-        n[2] = np.dot(R, [ 0,  1,  0])
-        n[3] = np.dot(R, [ 0, -1,  0])
-        n[4] = np.dot(R, [ 0,  0,  1])
-        n[5] = np.dot(R, [ 0,  0, -1])
+        n[0] = np.dot(R, [1, 0, 0])
+        n[1] = np.dot(R, [-1, 0, 0])
+        n[2] = np.dot(R, [0, 1, 0])
+        n[3] = np.dot(R, [0, -1, 0])
+        n[4] = np.dot(R, [0, 0, 1])
+        n[5] = np.dot(R, [0, 0, -1])
         return n
 
     def get_polyhedron(self, tf):
         """ Shape represented as inequality A*x <= b """
         A = self.get_normals(tf)
-        b = 0.5 * np.array([self.dx, self.dx,
-                            self.dy, self.dy,
-                            self.dz, self.dz])
+        b = 0.5 * np.array([self.dx, self.dx, self.dy, self.dy, self.dz, self.dz])
         b = b + np.dot(A, tf[:3, 3])
-        return A, b
+        return Polyhedron(A, b)
 
     def is_in_collision(self, tf, other, tf_other):
         fcl_tf_1 = fcl.Transform(tf[:3, :3], tf[:3, 3])
@@ -113,7 +115,7 @@ class Shape:
 
     def get_empty_lines(self, ax, *arg, **kwarg):
         """ Create empty lines to initialize an animation """
-        return [ax.plot([], [], '-', *arg, **kwarg)[0] for i in range(12)]
+        return [ax.plot([], [], "-", *arg, **kwarg)[0] for i in range(12)]
 
     def update_lines(self, lines, tf):
         """ Update existing lines on a plot using the given transform tf"""
@@ -137,26 +139,24 @@ class Collection:
         self.tf_s = tf_shapes
 
     def plot(self, ax, *arg, **kwarg):
-        if 'tf' in kwarg:
-            tf = kwarg.pop('tf')
+        if "tf" in kwarg:
+            tf = kwarg.pop("tf")
             for shape, tf_shape in zip(self.s, self.tf_s):
                 shape.plot(ax, np.dot(tf, tf_shape), *arg, **kwarg)
         else:
             for shape, tf_shape in zip(self.s, self.tf_s):
-                shape.plot(ax, tf_shape,  *arg, **kwarg)
+                shape.plot(ax, tf_shape, *arg, **kwarg)
 
     @property
     def shapes(self):
         return self.s
 
-    def get_polyhedron(self):
-        As = []
-        bs = []
+    def get_polyhedrons(self):
+        polys = []
         for s, tf in zip(self.s, self.tf_s):
             Ai, bi = s.get_polyhedron(tf)
-            As.append(Ai)
-            bs.append(bi)
-        return As, bs
+            polys.append(Polyhedron(Ai, bi))
+        return polys
 
     def is_in_collision(self, other, tf_self=None, tf_other=None):
         tf_shapes_self = self.tf_s
