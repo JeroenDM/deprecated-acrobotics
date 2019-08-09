@@ -5,7 +5,6 @@ from casadi import cos, sin, dot
 from acrobotics.util import get_default_axes3d
 from acrobotics.resources.path_on_table import scene2, scene1
 from acrobotics.resources.robots import Kuka
-from acrobotics.optimization import fk_all_links, fk_kuka2
 
 robot = Kuka()
 
@@ -22,6 +21,13 @@ eps = 1e-6  # collision tolerance
 xp = np.ones(N) * 0.8
 yp = np.linspace(-0.2, 0.2, N)
 zp = np.ones(N) * 0.2
+
+# Get initial values from task and inverse kinematics
+Tee = np.eye(4)
+Tee[:3, 3] = np.array([xp[0], yp[0], zp[0]])
+q_ik = robot.ik(Tee)["sol"]
+
+q_inits = [np.tile(qi, (N, 1)) for qi in q_ik]
 
 pol_mat_a = []
 pol_mat_b = []
@@ -55,7 +61,7 @@ def col_con(lam, mu, Ar, Ao, br, bo):
 
 
 for k in range(N):
-    fk = fk_all_links(robot.links, q[k, :])
+    fk = robot.fk_all_links_casadi(q[k, :])
     for i in range(ndof):
         Ri = fk[i][:3, :3]
         pi = fk[i][:3, 3]
@@ -78,12 +84,15 @@ V = ca.sum1(
 opti.minimize(V)
 
 for i in range(N):
-    Ti = fk_kuka2(q[i, :])
+    # Ti = fk_kuka2(q[i, :])
+    Ti = robot.fk_casadi(q[i, :])
     opti.subject_to(xp[i] == Ti[0, 3])
     opti.subject_to(yp[i] == Ti[1, 3])
     opti.subject_to(zp[i] == Ti[2, 3])
 
 opti.solver("ipopt")
+
+opti.set_initial(q, q_inits[5])  # 2 3 4 5  converges
 
 sol = opti.solve()
 
