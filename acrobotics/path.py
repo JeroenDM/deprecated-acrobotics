@@ -103,7 +103,7 @@ class TolEulerPt:
         return tf
 
     def plot(self, ax):
-        ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], "o", c="r")
+        ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], "o", c="r")
         plot_reference_frame(ax, tf=self.nominal_transform())
 
 
