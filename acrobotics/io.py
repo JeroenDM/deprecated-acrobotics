@@ -3,10 +3,11 @@ Fucntions to load tasks and other settings from json files.
 """
 import json
 import numpy as np
+from pyquaternion import Quaternion
 from numpy.linalg import norm
 
 from .geometry import Shape, Collection
-from .path import FreeOrientationPt
+from .path import FreeOrientationPt, TolPositionPt, TolerancedNumber
 from .util import rot_x, rot_y, rot_z
 
 
@@ -15,6 +16,11 @@ def create_transform(xyz, rpy):
     tf[:3, 3] = np.array(xyz)
     tf[:3, :3] = rot_x(rpy[0]) @ rot_y(rpy[1]) @ rot_z(rpy[2])
     return tf
+
+
+def rpy_to_quaternion(rpy):
+    R = rot_x(rpy[0]) @ rot_y(rpy[1]) @ rot_z(rpy[2])
+    return Quaternion(matrix=R)
 
 
 def create_line(start_pose, end_point, num_points):
@@ -38,6 +44,20 @@ def create_orientation_free_path(pos):
     return [FreeOrientationPt(pi) for pi in pos]
 
 
+def create_symmetric_position_tolerance(pos, rpy, pos_tol):
+    q = rpy_to_quaternion(rpy)
+    path = []
+    for p_nominal in pos:
+        xyz = []
+        for pi, tol in zip(p_nominal, pos_tol):
+            if tol > 0.0:
+                xyz.append(TolerancedNumber(pi - tol, pi + tol))
+            else:
+                xyz.append(pi)
+        path.append(TolPositionPt(xyz, q))
+    return path
+
+
 def parse_path(d):
     pd = d["path"]
 
@@ -52,6 +72,10 @@ def parse_path(d):
 
     if pd["tolerance"] == "orientation_free":
         path = create_orientation_free_path(pos)
+    elif pd["tolerance"] == "position_tolerance":
+        path = create_symmetric_position_tolerance(
+            pos, pd["start_pose"]["rpy"], pd["xyz_tol"]
+        )
     else:
         msg = "Unkown tolerance type: '{}'\n".format(pd["tolerance"])
         msg += "Options are: {}\n".format(["orientation_free"])

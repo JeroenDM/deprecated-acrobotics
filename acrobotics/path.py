@@ -107,7 +107,7 @@ class TolEulerPt:
         plot_reference_frame(ax, tf=self.nominal_transform())
 
 
-class TolPositionPoint:
+class TolPositionPt:
     """ Path point with fixed orientation and tol on position
     """
 
