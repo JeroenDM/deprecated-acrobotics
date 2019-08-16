@@ -5,6 +5,48 @@ from casadi import Opti, dot
 from .geometry import Polyhedron
 
 
+def get_optimal_path(path, robot, scene, q_init=None, max_iters=100):
+    N = len(path)
+    if q_init is None:
+        q_init = np.zeros((N, robot.ndof))
+
+    xyz = [tp.p for tp in path]
+
+    opti = ca.Opti()
+    q = opti.variable(N, 6)  #  joint variables along path
+
+    # collision constraints
+    cons = create_cc(opti, robot, scene, q)
+    opti.subject_to(cons)
+
+    # create path constraints
+    for i in range(N):
+        # Ti = fk_kuka2(q[i, :])
+        Ti = robot.fk_casadi(q[i, :])
+        opti.subject_to(xyz[i][0] == Ti[0, 3])
+        opti.subject_to(xyz[i][1] == Ti[1, 3])
+        opti.subject_to(xyz[i][2] == Ti[2, 3])
+
+    # objective
+    V = ca.sum1(
+        ca.sum2((q[:-1, :] - q[1:, :]) ** 2)
+    )  # + 0.05* ca.sumsqr(q) #+ 1 / ca.sum1(q[:, 4]**2)
+    opti.minimize(V)
+
+    p_opts = {}  # casadi options
+    s_opts = {"max_iter": max_iters}  # solver options
+    opti.solver("ipopt", p_opts, s_opts)
+    opti.set_initial(q, q_init)  # 2 3 4 5  converges
+    sol = opti.solve()
+
+    res = {"success": False}
+    if sol.stats()["success"]:
+        res["success"] = True
+        res["sol"] = sol.value(q)
+
+    return res
+
+
 def create_collision_constraints(lam, mu, Ar, Ao, br, bo, eps=1e-6):
     cons = []
     cons.append(-dot(br, lam) - dot(bo, mu) >= eps)
