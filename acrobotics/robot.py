@@ -181,6 +181,11 @@ class Robot:
                     return True
         return False
 
+    def is_in_self_collision(self, q):
+        geom_links = [l.geometry for l in self.links]
+        tf_links = self.fk_all_links(q)
+        return self._check_self_collision(tf_links, geom_links)
+
     def is_in_collision(self, q, collection):
         # check collision of fixed base geometry
         base = self.geometry_base
