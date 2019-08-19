@@ -5,7 +5,7 @@ from casadi import Opti, dot
 from .geometry import Polyhedron
 
 
-def get_optimal_path(path, robot, scene, q_init=None, max_iters=100):
+def get_optimal_path(path, robot, scene=None, q_init=None, max_iters=100):
     N = len(path)
     if q_init is None:
         q_init = np.zeros((N, robot.ndof))
@@ -16,8 +16,9 @@ def get_optimal_path(path, robot, scene, q_init=None, max_iters=100):
     q = opti.variable(N, 6)  #  joint variables along path
 
     # collision constraints
-    cons = create_cc(opti, robot, scene, q)
-    opti.subject_to(cons)
+    if scene is not None:
+        cons = create_cc(opti, robot, scene, q)
+        opti.subject_to(cons)
 
     # create path constraints
     for i in range(N):
