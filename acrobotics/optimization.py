@@ -43,7 +43,7 @@ def get_optimal_path(path, robot, scene=None, q_init=None, max_iters=100):
     res = {"success": False}
     if sol.stats()["success"]:
         res["success"] = True
-        res["sol"] = sol.value(q)
+        res["path"] = sol.value(q)
 
     return res
 

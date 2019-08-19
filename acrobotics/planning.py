@@ -9,7 +9,84 @@ from .cpp.graph import Graph
 from .path import *
 from pyquaternion import Quaternion
 
+from .optimization import get_optimal_path
+
 DEBUG = False
+
+
+class PathPtType:
+    TOL_POS = 0
+    TOL_ORI = 1
+    AXIS = 2
+
+
+class PlanningTask:
+    def __init__(self, path, scene=None):
+        self.path = path
+        if scene is None:
+            self.has_obstacles = False
+        else:
+            self.has_obstacles = True
+            self.scene = scene
+
+        # default settings
+        self.opt_based_max_iters = 100
+        self.grid_based_iters = 3
+        self.grid_samples = 500
+        self.iterative = False
+        self.method = "grid"
+        self.qp_init = np.zeros((len(path), 6))
+
+    def set_initial_path(self, q):
+        s = q.shape
+        if len(s) == 1:
+            N, ndof = len(self.path), s
+            self.qp_init = np.tile(q, (N, 1))
+        elif len(s) == 2:
+            N, ndof = s
+            assert N == len(self.path)
+            self.qp_init = q
+        else:
+            raise Exception(f"Wrong input shape {q.shape} for q.")
+
+    def solve(self, robot, method=None):
+        if method is None:
+            method = self.method
+
+        if method == "grid":
+            Q = cart_to_joint_no_redundancy(
+                robot, self.path, self.scene, num_samples=self.grid_samples
+            )
+            return get_shortest_path(Q, method="dijkstra")
+
+        elif method == "grid_iterative":
+            return cart_to_joint_iterative(
+                robot,
+                self.path,
+                self.scene,
+                num_samples=self.grid_samples,
+                max_iters=self.grid_based_iters,
+            )
+        elif method == "optimization":
+            return get_optimal_path(
+                self.path,
+                robot,
+                self.scene,
+                max_iters=self.opt_based_max_iters,
+                q_init=self.qp_init,
+            )
+        elif method == "grid_incremental":
+            Q = cart_to_joint_incremental(robot, self.path, self.scene)
+            print([len(q) for q in Q])
+            return get_shortest_path(Q, method="dijkstra")
+        else:
+            raise Exception(f"Unkown planning method {method}")
+
+    def plot(self, ax):
+        for tp in self.path:
+            tp.plot(ax)
+        if self.has_obstacles:
+            self.scene.plot(ax, c="g")
 
 
 def cart_to_joint_simple(robot, path, scene, q_fixed):
@@ -39,12 +116,6 @@ def cart_to_joint_simple(robot, path, scene, q_fixed):
         else:
             Q.append([])
     return Q
-
-
-class PathPtType:
-    TOL_POS = 0
-    TOL_ORI = 1
-    AXIS = 2
 
 
 def get_new_bounds(l, u, m, red=4):
@@ -234,6 +305,44 @@ def cart_to_joint_no_redundancy(robot, path, scene, num_samples=1000):
             else:
                 if DEBUG:
                     print("IK failed for point: {}".format(Ti[:3, 3]))
+
+        if len(q_sol) > 0:
+            Q.append(np.vstack(q_sol).astype("float32"))
+        else:
+            Q.append([])
+    return Q
+
+
+def cart_to_joint_incremental(robot, path, scene, min_samples=50, max_tries=1000):
+    """ cartesian path to joint solutions
+
+    The path tolerance is sampled by tp.discretise inside
+    the TrajectoryPoint class.
+
+    Return array with float32 elements, reducing data size.
+    During graph search c++ floats are used, also float32.
+    """
+    Q = []
+    for i, tp in enumerate(path):
+        print("Processing point " + str(i + 1) + "/" + str(len(path)))
+        q_sol = []
+        cnt = 0
+        while cnt < max_tries:
+            Ti = tp.get_samples(1, rep="transform")[0]
+            sol = robot.ik(Ti)
+            if sol["success"]:
+                for qi in sol["sol"]:
+                    if not robot.is_in_collision(qi, scene):
+                        q_sol.append(qi)
+                        cnt += 1
+                    else:
+                        if DEBUG:
+                            print("Collision for point: {}".format(Ti[:3, 3]))
+            else:
+                if DEBUG:
+                    print("IK failed for point: {}".format(Ti[:3, 3]))
+            if cnt >= min_samples:
+                break
 
         if len(q_sol) > 0:
             Q.append(np.vstack(q_sol).astype("float32"))

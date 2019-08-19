@@ -30,5 +30,5 @@ test_data = """{
 
 
 def test_parse_task_data():
-    path, scene = parse_task_data(json.loads(test_data))
-    assert len(path) == 10
+    task = parse_task_data(json.loads(test_data))
+    assert len(task.path) == 10

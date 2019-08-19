@@ -11,7 +11,7 @@ from acrobotics.io import load_task
 ## TODO:
 # is squared cost better than L1 norm,
 # I would expect it is to avoid jumps.
-path, obstacles = load_task("examples/small_passage.json")
+task = load_task("examples/small_passage.json")
 
 # goal frame to plot tool
 goal_tf = tf_inverse(torch.tf_tt)
@@ -25,14 +25,14 @@ data = []
 # using a convex of of the start and end point
 # si = path[0].get_samples(2000, rep="quat")
 
-for i, tp in enumerate(path):
+for i, tp in enumerate(task.path):
     si = tp.get_samples(1000, rep="quat")
     row = []
     for qi in si:
         tfi = qi.transformation_matrix
         tfi[:-1, -1] += tp.p
         tfi = tfi @ goal_tf
-        if not torch.is_in_collision(obstacles, tf_self=tfi):
+        if not torch.is_in_collision(task.scene, tf_self=tfi):
             row.append(qi.q)
     print("Found {} cc free points for tp {}".format(len(row), i))
     data.append(row)
@@ -73,7 +73,7 @@ sol = shortest_path(data, cost_function)
 
 # convert to transforms
 sol_tf = []
-for qi, tp in zip(sol["path"], path):
+for qi, tp in zip(sol["path"], task.path):
     sol_tf.append(Quaternion(qi).transformation_matrix)
     sol_tf[-1][:-1, -1] = tp.p
 
@@ -96,14 +96,12 @@ for qi, tp in zip(sol["path"], path):
 fig, ax = get_default_axes3d()
 plot_reference_frame(ax)
 # torch.plot(ax, c="k", tf=goal_tf)
-obstacles.plot(ax, c="g")
-for tp in path:
-    tp.plot(ax)
+task.plot(ax)
 
 for i, tf in enumerate(sol_tf):
     if i % 2 == 0:
         tfi = tf @ goal_tf
-        # if not torch.is_in_collision(obstacles, tf_self=tfi):
+        # if not torch.is_in_collision(task.scene, tf_self=tfi):
         torch.plot(ax, c="r", tf=tfi)
 
 fig.show()

@@ -9,6 +9,7 @@ from numpy.linalg import norm
 from .geometry import Shape, Collection
 from .path import FreeOrientationPt, TolPositionPt, TolerancedNumber
 from .util import rot_x, rot_y, rot_z
+from .planning import PlanningTask
 
 
 def create_transform(xyz, rpy):
@@ -112,7 +113,7 @@ def parse_obstacles(d):
 def parse_task_data(data):
     path = parse_path(data)
     scene = parse_obstacles(data)
-    return path, scene
+    return PlanningTask(path, scene)
 
 
 def load_task(filepath):
