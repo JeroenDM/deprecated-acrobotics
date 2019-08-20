@@ -15,7 +15,7 @@ python:
 addons:
   apt:
     packages:
-    - swig3.0
+    - swig
     - libeigen3-dev
 
 env:
@@ -47,4 +47,4 @@ install:
 - python setup.py install
 
 script:
-- pytest $PACKAGENAME
+- pytest

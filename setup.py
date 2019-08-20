@@ -1,10 +1,11 @@
 from setuptools import setup, find_packages, Extension
+import numpy
 
 graph_module = Extension('_graph',
     language="c++",
     extra_compile_args=['-std=c++11'],
     sources=['acrobotics/cpp/graph.i', 'acrobotics/cpp/src/graph.cpp'],
-    include_dirs=['acrobotics/cpp/include', '/usr/include/eigen3'],
+    include_dirs=['acrobotics/cpp/include', '/usr/include/eigen3', numpy.get_include()],
     swig_opts=['-c++', '-I acrobotics/cpp']
     )
 
