@@ -23,7 +23,7 @@ env:
     # List package dependencies for conda
     - CONDA_DEPS="pytest numpy matplotlib"
     # dependencies not available with conda
-    - PIP_DEPS="pyquaternion python-fcl"
+    - PIP_DEPS="pyquaternion python-fcl casadi"
     # package name for test invocation
     - PACKAGENAME="acrobotics"
 
