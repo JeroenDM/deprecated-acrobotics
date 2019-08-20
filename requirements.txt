@@ -2,6 +2,7 @@ numpy
 matplotlib
 pyquaternion
 python-fcl
+casadi
 pytest
 pytest-cov
 codecov
