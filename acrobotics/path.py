@@ -6,6 +6,7 @@ hence the TolerancedNumber class.
 import numpy as np
 from pyquaternion import Quaternion
 from .util import HaltonSampler, create_grid, rot_x, rot_y, rot_z, sample_SO3
+from .util import plot_reference_frame
 
 # =============================================================================
 # Classes
@@ -94,11 +95,19 @@ class TolEulerPt:
     def discretise(self):
         return self.get_samples(None)
 
+    def nominal_transform(self):
+        p = self.p_nominal
+        tf = np.eye(4)
+        tf[:3, 3] = p[:3]
+        tf[:3, :3] = np.dot(rot_x(p[3]), np.dot(rot_y(p[4]), rot_z(p[5])))
+        return tf
+
     def plot(self, ax):
         ax.plot([self.pos_nom[0]], [self.pos_nom[1]], [self.pos_nom[2]], "o", c="r")
+        plot_reference_frame(ax, tf=self.nominal_transform())
 
 
-class TolPositionPoint:
+class TolPositionPt:
     """ Path point with fixed orientation and tol on position
     """
 

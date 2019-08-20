@@ -14,6 +14,7 @@
 - other cost functions (deviation from nominal?)
 - implement joint limits for robot inverse kinematics
 - redundant joint tolerance reduction
+- when plotting a robot, add default color argument
 
 #issues
 

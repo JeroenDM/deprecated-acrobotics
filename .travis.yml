@@ -11,7 +11,7 @@ branches:
 
 python:
   - 3.7
- 
+
 addons:
   apt:
     packages:
@@ -43,6 +43,7 @@ before_install:
 - pip install $PIP_DEPS
 
 install:
+- python setup.py build_ext --inplace
 - python setup.py install
 
 script:

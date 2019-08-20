@@ -7,32 +7,34 @@ from acrobotics.util import pose_z
 
 tf_identity = np.eye(4)
 
-class TestShape():
+
+class TestShape:
     def test_init(self):
         b = Shape(1, 2, 3)
 
     def test_get_vertices(self):
         b = Shape(1, 2, 3)
         v = b.get_vertices(tf_identity)
-        desired = np.array([[-0.5, 1, 1.5],
-                           [-0.5, 1, -1.5],
-                           [-0.5, -1, 1.5],
-                           [-0.5, -1, -1.5],
-                           [0.5, 1, 1.5],
-                           [0.5, 1, -1.5],
-                           [0.5, -1, 1.5],
-                           [0.5, -1, -1.5]])
+        desired = np.array(
+            [
+                [-0.5, 1, 1.5],
+                [-0.5, 1, -1.5],
+                [-0.5, -1, 1.5],
+                [-0.5, -1, -1.5],
+                [0.5, 1, 1.5],
+                [0.5, 1, -1.5],
+                [0.5, -1, 1.5],
+                [0.5, -1, -1.5],
+            ]
+        )
         assert_almost_equal(v, desired)
 
     def test_get_normals(self):
         b = Shape(1, 2, 3)
         n = b.get_normals(tf_identity)
-        desired = np.array([[1, 0, 0],
-                            [-1, 0, 0],
-                            [0, 1, 0],
-                            [0, -1, 0],
-                            [0, 0, 1],
-                            [0, 0, -1]])
+        desired = np.array(
+            [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+        )
         assert_almost_equal(n, desired)
 
     def test_set_transform(self):
@@ -40,14 +42,18 @@ class TestShape():
         tf = np.eye(4)
         tf[0, 3] = 10.5
         v = b.get_vertices(tf)
-        desired = np.array([[10, 1, 1.5],
-                           [10, 1, -1.5],
-                           [10, -1, 1.5],
-                           [10, -1, -1.5],
-                           [11, 1, 1.5],
-                           [11, 1, -1.5],
-                           [11, -1, 1.5],
-                           [11, -1, -1.5]])
+        desired = np.array(
+            [
+                [10, 1, 1.5],
+                [10, 1, -1.5],
+                [10, -1, 1.5],
+                [10, -1, -1.5],
+                [11, 1, 1.5],
+                [11, 1, -1.5],
+                [11, -1, 1.5],
+                [11, -1, -1.5],
+            ]
+        )
         assert_almost_equal(v, desired)
 
     def test_set_transform2(self):
@@ -56,14 +62,18 @@ class TestShape():
         # rotate pi / 2 around x-axis
         tf[1:3, 1:3] = np.array([[0, -1], [1, 0]])
         v = b.get_vertices(tf)
-        desired = np.array([[-0.5, -1.5, 1],
-                           [-0.5, 1.5, 1],
-                           [-0.5, -1.5, -1],
-                           [-0.5, 1.5, -1],
-                           [0.5, -1.5, 1],
-                           [0.5, 1.5, 1],
-                           [0.5, -1.5, -1],
-                           [0.5, 1.5, -1]])
+        desired = np.array(
+            [
+                [-0.5, -1.5, 1],
+                [-0.5, 1.5, 1],
+                [-0.5, -1.5, -1],
+                [-0.5, 1.5, -1],
+                [0.5, -1.5, 1],
+                [0.5, 1.5, 1],
+                [0.5, -1.5, -1],
+                [0.5, 1.5, -1],
+            ]
+        )
         assert_almost_equal(v, desired)
 
     def test_get_edges(self):
@@ -80,12 +90,9 @@ class TestShape():
     def test_polyhedron(self):
         b = Shape(1, 2, 3)
         A, b = b.get_polyhedron(np.eye(4))
-        Aa = np.array([[1, 0, 0],
-                       [-1, 0, 0],
-                       [0, 1, 0],
-                       [0, -1, 0],
-                       [0, 0, 1],
-                       [0, 0, -1]])
+        Aa = np.array(
+            [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+        )
         ba = np.array([0.5, 0.5, 1, 1, 1.5, 1.5])
         assert_almost_equal(A, Aa)
         assert_almost_equal(b, ba)
@@ -94,12 +101,9 @@ class TestShape():
         b = Shape(1, 2, 3)
         tf = pose_z(0.3, 0.1, 0.2, -0.3)
         A, b = b.get_polyhedron(tf)
-        Aa = np.array([[1, 0, 0],
-                       [-1, 0, 0],
-                       [0, 1, 0],
-                       [0, -1, 0],
-                       [0, 0, 1],
-                       [0, 0, -1]])
+        Aa = np.array(
+            [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+        )
         ba = np.array([0.5, 0.5, 1, 1, 1.5, 1.5])
         Aa = np.dot(Aa, tf[:3, :3].T)
         ba = ba + np.dot(Aa, tf[:3, 3])
@@ -113,13 +117,13 @@ class TestShape():
         assert actual == True
 
         b3 = Shape(1, 2, 1)
-        T3 = pose_z(np.pi/4, 0.7, 0.7, 0)
+        T3 = pose_z(np.pi / 4, 0.7, 0.7, 0)
         assert b1.is_in_collision(tf_identity, b3, T3) == True
 
         b4 = Shape(1, 1, 1)
         b5 = Shape(1, 1, 2)
         T4 = pose_z(0, -1, -1, 0)
-        T5 = pose_z(np.pi/4, -2, -2, 0)
+        T5 = pose_z(np.pi / 4, -2, -2, 0)
         assert b4.is_in_collision(T4, b5, T5) == False
 
     def test_plot(self):
@@ -129,22 +133,19 @@ class TestShape():
         b1.plot(ax, tf_identity)
         assert True
 
-class TestCollection():
+
+class TestCollection:
     def test_polyhedron(self):
         b = Shape(1, 2, 3)
         tf = pose_z(0.3, 0.1, 0.2, -0.3)
         col = Collection([b], [tf])
-        A, b = col.get_polyhedron()
-        assert(len(A) == 1)
-        assert(len(b) == 1)
-        Aa = np.array([[1, 0, 0],
-                       [-1, 0, 0],
-                       [0, 1, 0],
-                       [0, -1, 0],
-                       [0, 0, 1],
-                       [0, 0, -1]])
+        polys = col.get_polyhedrons()
+        assert len(polys) == 1
+        Aa = np.array(
+            [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+        )
         ba = np.array([0.5, 0.5, 1, 1, 1.5, 1.5])
         Aa = np.dot(Aa, tf[:3, :3].T)
         ba = ba + np.dot(Aa, tf[:3, 3])
-        assert_almost_equal(A[0], Aa)
-        assert_almost_equal(b[0], ba)
+        assert_almost_equal(polys[0].A, Aa)
+        assert_almost_equal(polys[0].b, ba)

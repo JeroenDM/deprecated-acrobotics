@@ -6,14 +6,15 @@ Inverse kinematics are implemented for specific robots
 """
 
 import numpy as np
+import casadi as ca
 from collections import namedtuple
 from matplotlib import animation
 from .geometry import Collection
 from .util import plot_reference_frame
 
 # use named tuples to make data more readable
-JointLimit = namedtuple('JointLimit', ['lower', 'upper'])
-DHLink = namedtuple('DHLink', ['a', 'alpha', 'd', 'theta'])
+JointLimit = namedtuple("JointLimit", ["lower", "upper"])
+DHLink = namedtuple("DHLink", ["a", "alpha", "d", "theta"])
 
 
 class Link:
@@ -27,7 +28,7 @@ class Link:
         self.dh = dh_parameters
         self.joint_type = joint_type
         self.geometry = geometry
-        
+
         # save transform object for performance
         self._T = np.eye(4)
 
@@ -37,9 +38,9 @@ class Link:
         Links and joints are numbered from 1 to ndof, but python
         indexing of these links goes from 0 to ndof-1!
         """
-        if self.joint_type == 'r':
+        if self.joint_type == "r":
             a, alpha, d, theta = self.dh.a, self.dh.alpha, self.dh.d, qi
-        if self.joint_type == 'p':
+        if self.joint_type == "p":
             a, alpha, d, theta = self.dh.a, self.dh.alpha, qi, self.dh.theta
 
         c_theta = np.cos(theta)
@@ -49,12 +50,28 @@ class Link:
         T = self._T
         T[0, 0], T[0, 1] = c_theta, -s_theta * c_alpha
         T[0, 2], T[0, 3] = s_theta * s_alpha, a * c_theta
-        
+
         T[1, 0], T[1, 1] = s_theta, c_theta * c_alpha
         T[1, 2], T[1, 3] = -c_theta * s_alpha, a * s_theta
-        
+
         T[2, 1], T[2, 2], T[2, 3] = s_alpha, c_alpha, d
         return T
+
+    def get_link_relative_transform_casadi(link, qi):
+        """ Link transform according to the Denavit-Hartenberg convention.
+        Casadi compatible function.
+        """
+        a, alpha, d, theta = link.dh.a, link.dh.alpha, link.dh.d, qi
+
+        c_t, s_t = ca.cos(theta), ca.sin(theta)
+        c_a, s_a = ca.cos(alpha), ca.sin(alpha)
+
+        row1 = ca.hcat([c_t, -s_t * c_a, s_t * s_a, a * c_t])
+        row2 = ca.hcat([s_t, c_t * c_a, -c_t * s_a, a * s_t])
+        row3 = ca.hcat([0, s_a, c_a, d])
+        row4 = ca.hcat([0, 0, 0, 1])
+
+        return ca.vcat([row1, row2, row3, row4])
 
     def plot(self, ax, tf, *arg, **kwarg):
         self.geometry.plot(ax, tf=tf, *arg, **kwarg)
@@ -97,13 +114,12 @@ class Robot:
 
         # self collision matrix
         # default: do not check link neighbours, create band structure matrix
-        temp = np.ones((self.ndof, self.ndof), dtype='bool')
+        temp = np.ones((self.ndof, self.ndof), dtype="bool")
         self.collision_matrix = np.tril(temp, k=-3) + np.triu(temp, k=3)
         self.do_check_self_collision = True
-        
+
         # keep track of most likly links to be in collision
         self.collision_priority = list(range(self.ndof))
-
 
     def fk(self, q):
         """ Return end effector frame, either last link, or tool frame
@@ -117,6 +133,15 @@ class Robot:
             T = np.dot(T, self.tool.tf_tt)
         return T
 
+    def fk_casadi(self, q):
+        T = self.tf_base
+        for i in range(0, self.ndof):
+            Ti = self.links[i].get_link_relative_transform_casadi(q[i])
+            T = T @ Ti
+        if self.tool is not None:
+            T = T @ self.tool.tf_tt
+        return T
+
     def fk_all_links(self, q):
         """ Return link frames (not base or tool)
         """
@@ -124,7 +149,18 @@ class Robot:
         T = self.tf_base
         for i in range(0, self.ndof):
             Ti = self.links[i].get_link_relative_transform(q[i])
-            T = np.dot(T, Ti)
+            T = T @ Ti
+            tf_links.append(T)
+        return tf_links
+
+    def fk_all_links_casadi(self, q):
+        """ Return link frames (not base or tool)
+        """
+        tf_links = []
+        T = self.tf_base
+        for i in range(0, self.ndof):
+            Ti = self.links[i].get_link_relative_transform_casadi(q[i])
+            T = T @ Ti
             tf_links.append(T)
         return tf_links
 
@@ -139,9 +175,16 @@ class Robot:
         if self.tool is not None:
             tf_tool = tf_links[-1]
             for tf_link, geom_link in zip(tf_links[:-1], geom_links[:-1]):
-                if geom_link.is_in_collision(self.tool, tf_self=tf_link, tf_other=tf_tool):
+                if geom_link.is_in_collision(
+                    self.tool, tf_self=tf_link, tf_other=tf_tool
+                ):
                     return True
         return False
+
+    def is_in_self_collision(self, q):
+        geom_links = [l.geometry for l in self.links]
+        tf_links = self.fk_all_links(q)
+        return self._check_self_collision(tf_links, geom_links)
 
     def is_in_collision(self, q, collection):
         # check collision of fixed base geometry
@@ -153,13 +196,13 @@ class Robot:
         # check collision for all links
         geom_links = [l.geometry for l in self.links]
         tf_links = self.fk_all_links(q)
-        
+
         for i in self.collision_priority:
             if geom_links[i].is_in_collision(collection, tf_self=tf_links[i]):
                 # move current index to front of priority list
                 self.collision_priority.remove(i)
                 self.collision_priority.insert(0, i)
-                return True 
+                return True
 
         if self.tool is not None:
             tf_tool = tf_links[-1]
@@ -191,7 +234,7 @@ class Robot:
         points = [tf[0:3, 3] for tf in tf_links]
         points = np.array(points)
         points = np.vstack((self.tf_base[0:3, 3], points))
-        ax.plot(points[:, 0], points[:, 1], points[:, 2], 'o-')
+        ax.plot(points[:, 0], points[:, 1], points[:, 2], "o-")
         for tfi in tf_links:
             plot_reference_frame(ax, tfi)
 
@@ -233,6 +276,6 @@ class Robot:
 
         ls = get_emtpy_lines(ax)
         N = len(joint_space_path)
-        self.animation = animation.FuncAnimation(fig, update_lines, N,
-                                                 fargs=(joint_space_path, ls),
-                                                 interval=200, blit=False)
+        self.animation = animation.FuncAnimation(
+            fig, update_lines, N, fargs=(joint_space_path, ls), interval=200, blit=False
+        )
