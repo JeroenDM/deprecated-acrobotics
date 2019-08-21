@@ -3,8 +3,7 @@ General purpose functions to create matrices and plot things.
 """
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from pyquaternion import Quaternion
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
 pi = np.pi
 
@@ -79,6 +78,11 @@ def tf_inverse(T):
     Ti[:3, :3] = T[:3, :3].transpose()
     Ti[:3, 3] = np.dot(-Ti[:3, :3], T[:3, 3])
     return Ti
+
+
+def rpy_to_rotation_matrix(rpy):
+    roll, pitch, yaw = rpy[0], rpy[1], rpy[2]
+    return rot_x(roll) @ rot_y(pitch) @ rot_z(yaw)
 
 
 def create_grid(r):
@@ -164,96 +168,3 @@ def plot_reference_frame(ax, tf=None, arrow_length=0.2):
     ax.plot(x_axis[0], x_axis[1], x_axis[2], "-", c="r")
     ax.plot(y_axis[0], y_axis[1], y_axis[2], "-", c="g")
     ax.plot(z_axis[0], z_axis[1], z_axis[2], "-", c="b")
-
-
-# ==============================================================================
-# SAMPLING METHODS
-# ==============================================================================
-# def halton_sequence(size, dim):
-#    seq = []
-#    primeGen = next_prime()
-#    next(primeGen)
-#    for d in range(dim):
-#        base = next(primeGen)
-#        seq.append([vdc(i, base) for i in range(size)])
-#    return np.array(seq).T
-
-
-def vdc(n, base=2):
-    """ Create van der Corput sequence
-
-    source for van der Corput and Halton sampling code
-    https://laszukdawid.com/2017/02/04/halton-sequence-in-python/
-    """
-    vdc, denom = 0, 1
-    while n:
-        denom *= base
-        n, remainder = divmod(n, base)
-        vdc += remainder / denom
-    return vdc
-
-
-def next_prime():
-    def is_prime(num):
-        "Checks if num is a prime value"
-        for i in range(2, int(num ** 0.5) + 1):
-            if (num % i) == 0:
-                return False
-        return True
-
-    prime = 3
-    while 1:
-        if is_prime(prime):
-            yield prime
-        prime += 2
-
-
-class HaltonSampler:
-    def __init__(self, dim):
-        self.dim = dim
-
-        # setup primes for every dimension
-        prime_factory = next_prime()
-        self.primes = []
-        for i in range(dim):
-            self.primes.append(next(prime_factory))
-
-        # init counter for van der Corput sampling
-        self.cnt = 1
-
-    def get_samples(self, n):
-        seq = []
-        for d in range(self.dim):
-            base = self.primes[d]
-            seq.append([vdc(i, base) for i in range(self.cnt, self.cnt + n)])
-        self.cnt += n
-        return np.array(seq).T
-
-
-def sample_SO3(n=10, rep="rpy", method="random"):
-    """Generate a random unit quaternion.
-
-    Uniformly distributed across the rotation space
-    As per: http://planning.cs.uiuc.edu/node198.html
-    and code from http://kieranwynn.github.io/pyquaternion
-    """
-    if method is "random":
-        r1, r2, r3 = np.random.random((3, n))
-    elif method is "halton":
-        hs = HaltonSampler(3)
-        r1, r2, r3 = (hs.get_samples(n)).T
-    else:
-        raise ValueError("Invalid sampling method: {}".format(method))
-
-    q1 = np.sqrt(1.0 - r1) * (np.sin(2 * pi * r2))
-    q2 = np.sqrt(1.0 - r1) * (np.cos(2 * pi * r2))
-    q3 = np.sqrt(r1) * (np.sin(2 * pi * r3))
-    q4 = np.sqrt(r1) * (np.cos(2 * pi * r3))
-
-    result = [Quaternion(q1[i], q2[i], q3[i], q4[i]) for i in range(n)]
-    if rep == "quat":
-        return result
-    elif rep == "transform":
-        return [q.transformation_matrix for q in result]
-    elif rep == "rpy":
-        return [np.array(q.yaw_pitch_roll) for q in result]

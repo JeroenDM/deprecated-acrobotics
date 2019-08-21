@@ -7,7 +7,8 @@ from pyquaternion import Quaternion
 from numpy.linalg import norm
 
 from .geometry import Shape, Collection
-from .path import FreeOrientationPt, TolPositionPt, TolerancedNumber
+from .path.path_pt import FreeOrientationPt, TolPositionPt
+from .path.toleranced_number import TolerancedNumber
 from .util import rot_x, rot_y, rot_z
 from .planning import PlanningTask
 

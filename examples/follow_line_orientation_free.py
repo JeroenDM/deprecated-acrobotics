@@ -17,6 +17,10 @@ task.opt_based_max_iters = 1000
 
 res = task.solve(robot, method="grid_incremental")
 
+solver = create_solver("gridIncremental")
+solver(robot, task)
+
+
 qp_sol = res["path"]
 
 
