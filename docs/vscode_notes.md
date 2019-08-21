@@ -7,3 +7,6 @@ I have to use pytest version:
 And vscode version:
 2019.3.6558
 (https://stackoverflow.com/questions/55837922/vscode-pytest-test-discovery-fails)
+
+Run coverage check
+`pytest --cov=acrobotics`

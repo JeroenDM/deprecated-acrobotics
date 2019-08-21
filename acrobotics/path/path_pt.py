@@ -178,7 +178,7 @@ class TolOrientationPt:
         """ sample near nominal orientation (position fixed)
         """
         samples = []
-        for i in range(num_samples):
+        for _ in range(num_samples):
             qr = Quaternion.random_near(self.o, dist)
             samples.append(qr.transformation_matrix)
         samples = np.array(samples)
@@ -221,8 +221,24 @@ class TolPositionPt:
 
         return samples
 
+    def _check_for_tolerance(self, l):
+        """ Check which value are toleranced numbers and get nominal values.
+        Returns a list of booleans indication tolerance and a list of
+        nominal values.
+        """
+        has_tolerance = [isinstance(num, TolerancedNumber) for num in l]
+        nominal_vals = np.zeros(3)
+
+        for i in range(3):
+            if has_tolerance[i]:
+                nominal_vals[i] = l[i].nominal
+            else:
+                nominal_vals[i] = l[i]
+
+        return has_tolerance, nominal_vals
+
     def __str__(self):
-        return str(self.p)
+        return str(self.pos)
 
     def plot(self, ax):
-        ax.plot([self.p[0]], [self.p[1]], [self.p[2]], "o", c="r")
+        ax.plot([self.pos[0]], [self.pos[1]], [self.pos[2]], "o", c="r")

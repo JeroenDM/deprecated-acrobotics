@@ -1,7 +1,8 @@
-from acrobotics.samplers import *
+from acrobotics.samplers import Sampler, sample_SO3
 
 import numpy as np
 from numpy.testing import assert_almost_equal
+from acrobotics.pyquat_extended import QuaternionExtended as Quaternion
 
 
 def assert_in_range(x, lower=0, upper=1):

@@ -3,7 +3,7 @@ Fucntions to load tasks and other settings from json files.
 """
 import json
 import numpy as np
-from pyquaternion import Quaternion
+from .pyquat_extended import QuaternionExtended as Quaternion
 from numpy.linalg import norm
 
 from .geometry import Shape, Collection

@@ -1,5 +1,5 @@
 import json
-from acrobotics.io import *
+from acrobotics.io import parse_task_data
 
 test_data = """{
   "name" : "line_orient_free",

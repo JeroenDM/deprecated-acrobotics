@@ -11,6 +11,11 @@ from ..samplers import Sampler, sample_SO3
 
 
 class PathPointNumber:
+    """
+    Wrapper for a float to simplify `~acrobotics.path.path_pt.PathPt`.
+    This class should never be used outside the path module.
+    """
+
     def __init__(self, value: float):
         self.nominal = value
         self.is_toleranced = False
@@ -34,7 +39,7 @@ class TolerancedNumber(PathPointNumber):
         if nominal is None:
             self.nominal = lower_bound + (upper_bound - lower_bound) / 2
         elif (nominal < lower_bound) or (nominal > upper_bound):
-            raise ValueError("Nominal value must respect the bounds")
+            raise ValueError("Nominal value must respect the bounds.")
         else:
             self.nominal = nominal
 
@@ -44,9 +49,4 @@ class TolerancedNumber(PathPointNumber):
 
     def discretize(self):
         return np.linspace(self.lower, self.upper, self.num_samples)
-
-
-class NotATolerancedNumber(TolerancedNumber):
-    def __init__(self, value: float):
-        super().__init__(value, value, nominal=value, num_samples=num_samples)
 

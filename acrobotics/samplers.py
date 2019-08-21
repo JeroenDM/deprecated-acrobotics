@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.random import uniform
-from pyquaternion import Quaternion
+from .pyquat_extended import QuaternionExtended as Quaternion
 
 
 class Sampler:
@@ -56,7 +56,7 @@ class HaltonSampler:
         # setup primes for every dimension
         prime_factory = next_prime()
         self.primes = []
-        for i in range(dim):
+        for _ in range(dim):
             self.primes.append(next(prime_factory))
 
         # init counter for van der Corput sampling
@@ -79,7 +79,7 @@ def sample_SO3(n=10, rep="rpy", method="random"):
     and code from http://kieranwynn.github.io/pyquaternion
     """
     if method is "random":
-        r1, r2, r3 = np.random.random((3, n))
+        r1, r2, r3 = np.random.rand(3, n)
     elif method is "halton":
         hs = HaltonSampler(3)
         r1, r2, r3 = (hs.get_samples(n)).T
