@@ -1,4 +1,4 @@
-from acrobotics.samplers import Sampler, sample_SO3
+from acrobotics.samplers import Sampler, sample_SO3, SampleMethod
 
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -13,13 +13,13 @@ def assert_in_range(x, lower=0, upper=1):
 class TestSampler:
     def test_random(self):
         s = Sampler()
-        samples = s.sample(5, 3, method="random_uniform")
+        samples = s.sample(5, 3, method=SampleMethod.random_uniform)
         assert samples.shape == (5, 3)
         assert_in_range(samples.flatten())
 
     def test_deterministic(self):
         s = Sampler()
-        samples = s.sample(5, 3, method="deterministic_uniform")
+        samples = s.sample(5, 3, method=SampleMethod.deterministic_uniform)
         assert samples.shape == (5, 3)
         assert_in_range(samples.flatten())
         desired_samples = np.array(
@@ -44,7 +44,7 @@ class TestSampler:
                 [0.37037037, 0.08, 0.44897959],
             ]
         )
-        samples_2 = s.sample(5, 3, method="deterministic_uniform")
+        samples_2 = s.sample(5, 3, method=SampleMethod.deterministic_uniform)
         assert_almost_equal(samples_2, desired_samples_2)
 
 

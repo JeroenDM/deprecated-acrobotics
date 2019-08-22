@@ -5,7 +5,7 @@ from .toleranced_number import TolerancedNumber, PathPointNumber
 from ..util import plot_reference_frame, create_grid, rpy_to_rotation_matrix
 from ..samplers import Sampler
 from typing import List
-from ..samplers import sample_SO3
+from ..samplers import generate_quaternions, sample_SO3, SampleMethod
 
 
 class PathPt(ABC):
@@ -36,10 +36,9 @@ class PathPt(ABC):
 
     def sample_grid(self) -> List[np.array]:
         samples = create_grid([value.discretize() for value in self.values])
-        transforms = [self.to_transform(sample) for sample in samples]
-        return transforms
+        return [self.to_transform(sample) for sample in samples]
 
-    def sample_incremental(self, num_samples, method) -> List[np.array]:
+    def sample_incremental(self, num_samples, method: SampleMethod) -> List[np.array]:
         # create a (num_samples x sample_dim) matrix with uniform samples
         R = self.sampler.sample(num_samples, self.sample_dim, method)
 
@@ -54,8 +53,7 @@ class PathPt(ABC):
                 samples[:, i] = np.ones(num_samples) * value.nominal
 
         # convert position and euler angles to transforms
-        transforms = [self.to_transform(sample) for sample in samples]
-        return transforms
+        return [self.to_transform(sample) for sample in samples]
 
     @abstractmethod
     def to_transform(self, values) -> np.array:

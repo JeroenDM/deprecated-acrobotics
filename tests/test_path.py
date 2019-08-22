@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from acrobotics.path.toleranced_number import TolerancedNumber, PathPointNumber
-from acrobotics.path.path_pt import TolEulerPt
+from acrobotics.samplers import SampleMethod
 
 import pytest
 import numpy as np
@@ -42,7 +42,7 @@ class TestEulerPt:
         assert actual_str == "[3. 2. 3.]"
 
         N = 10
-        samples = tp.sample_incremental(N, "random_uniform")
+        samples = tp.sample_incremental(N, SampleMethod.random_uniform)
         assert len(samples) == N
         for transform in samples:
             assert transform.shape == (4, 4)

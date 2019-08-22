@@ -1,23 +1,28 @@
 import numpy as np
 from numpy.random import uniform
 from .pyquat_extended import QuaternionExtended as Quaternion
+from enum import Enum
 
+
+class SampleMethod(Enum):
+    random_uniform = 0
+    deterministic_uniform = 1
 
 class Sampler:
     def __init__(self):
         self.halton_sampler: HaltonSampler = None
 
-    def sample(self, num_samples: int, sample_dim: int, method: str):
-        if method == "random_uniform":
+    def sample(self, num_samples: int, sample_dim: int, method: SampleMethod):
+        if method == SampleMethod.random_uniform:
             return np.random.rand(num_samples, sample_dim)
-        elif method == "deterministic_uniform":
+        elif method == SampleMethod.deterministic_uniform:
             if self.halton_sampler is None:
                 self.halton_sampler = HaltonSampler(sample_dim)
             # make sure an existing sampler has the correct dimension
             assert self.halton_sampler.dim == sample_dim
             return self.halton_sampler.get_samples(num_samples)
         else:
-            raise ValueError(f"Unkown sampling method: {method}")
+            raise NotImplementedError(f"Unkown sampling method: {method}")
 
 
 def vdc(n, base=2):
