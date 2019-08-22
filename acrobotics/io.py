@@ -6,7 +6,7 @@ import numpy as np
 from .pyquat_extended import QuaternionExtended as Quaternion
 from numpy.linalg import norm
 
-from .geometry import Shape, Collection
+from .geometry import Shape, Scene
 from .path.path_pt import FreeOrientationPt, TolPositionPt
 from .path.toleranced_number import TolerancedNumber
 from .util import rot_x, rot_y, rot_z
@@ -108,7 +108,7 @@ def parse_obstacles(d):
         shapes.append(s)
         shape_transforms.append(tf)
 
-    return Collection(shapes, shape_transforms)
+    return Scene(shapes, shape_transforms)
 
 
 def parse_task_data(data):

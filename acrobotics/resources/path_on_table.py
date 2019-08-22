@@ -3,7 +3,7 @@
 import numpy as np
 from acrobotics.path import TolPositionPt, TolerancedNumber
 from acrobotics.path import FreeOrientationPt
-from acrobotics.geometry import Shape, Collection
+from acrobotics.geometry import Shape, Scene
 from pyquaternion import Quaternion
 
 
@@ -39,10 +39,10 @@ table_tf = np.array([[1, 0, 0, 0.80], [0, 1, 0, 0.00], [0, 0, 1, 0.12], [0, 0, 0
 #                         [0, 0, 0, 1]])
 
 
-# scene1 = Collection([table, obstacle],
+# scene1 = Scene([table, obstacle],
 #                    [table_tf, obstacle_tf])
 
-scene1 = Collection([table], [table_tf])
+scene1 = Scene([table], [table_tf])
 
 # a smaller table with two boxes at the beginning of the path
 # the end-effector has to move in between the boxes and over the table
@@ -54,7 +54,7 @@ box_lo = Shape(0.1, 0.1, 0.1)
 box_up_tf = np.array([[1, 0, 0, 0.80], [0, 1, 0, -0.1], [0, 0, 1, 0.32], [0, 0, 0, 1]])
 box_lo_tf = np.array([[1, 0, 0, 0.80], [0, 1, 0, -0.1], [0, 0, 1, 0.08], [0, 0, 0, 1]])
 
-scene2 = Collection([table2, box_up, box_lo], [table2_tf, box_up_tf, box_lo_tf])
+scene2 = Scene([table2, box_up, box_lo], [table2_tf, box_up_tf, box_lo_tf])
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

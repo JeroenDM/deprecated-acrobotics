@@ -9,12 +9,21 @@ import numpy as np
 import casadi as ca
 from collections import namedtuple
 from matplotlib import animation
-from .geometry import Collection
+from .geometry import Scene
 from .util import plot_reference_frame
+from typing import List
 
 # use named tuples to make data more readable
 JointLimit = namedtuple("JointLimit", ["lower", "upper"])
 DHLink = namedtuple("DHLink", ["a", "alpha", "d", "theta"])
+
+
+class IKResult:
+    def __init__(self, success: bool, solutions: List = None):
+        self.success = success
+        if self.success:
+            assert solutions is not None
+            self.solutions = solutions
 
 
 class Link:
@@ -23,7 +32,7 @@ class Link:
     def __init__(self, dh_parameters, joint_type, geometry):
         """ Creates a linkf from Denavit-Hartenberg parameters,
         a joint type ('r' for revolute, 'p' for prismatic) and
-        a Collection of Shapes representing the geometry.
+        a Scene of Shapes representing the geometry.
         """
         self.dh = dh_parameters
         self.joint_type = joint_type
@@ -77,8 +86,8 @@ class Link:
         self.geometry.plot(ax, tf=tf, *arg, **kwarg)
 
 
-class Tool(Collection):
-    """ Collection with added atribute tool tip transform tf_tt
+class Tool(Scene):
+    """ Scene with added atribute tool tip transform tf_tt
      relative to the last link.
     """
 
@@ -187,27 +196,28 @@ class Robot:
         return self._check_self_collision(tf_links, geom_links)
 
     def is_in_collision(self, q, collection):
-        # check collision of fixed base geometry
-        base = self.geometry_base
-        if base is not None:
-            if base.is_in_collision(collection, tf_self=self.tf_base):
-                return True
+        if collection is not None:
+            # check collision of fixed base geometry
+            base = self.geometry_base
+            if base is not None:
+                if base.is_in_collision(collection, tf_self=self.tf_base):
+                    return True
 
-        # check collision for all links
-        geom_links = [l.geometry for l in self.links]
-        tf_links = self.fk_all_links(q)
+            # check collision for all links
+            geom_links = [l.geometry for l in self.links]
+            tf_links = self.fk_all_links(q)
 
-        for i in self.collision_priority:
-            if geom_links[i].is_in_collision(collection, tf_self=tf_links[i]):
-                # move current index to front of priority list
-                self.collision_priority.remove(i)
-                self.collision_priority.insert(0, i)
-                return True
+            for i in self.collision_priority:
+                if geom_links[i].is_in_collision(collection, tf_self=tf_links[i]):
+                    # move current index to front of priority list
+                    self.collision_priority.remove(i)
+                    self.collision_priority.insert(0, i)
+                    return True
 
-        if self.tool is not None:
-            tf_tool = tf_links[-1]
-            if self.tool.is_in_collision(collection, tf_self=tf_tool):
-                return True
+            if self.tool is not None:
+                tf_tool = tf_links[-1]
+                if self.tool.is_in_collision(collection, tf_self=tf_tool):
+                    return True
 
         if self.do_check_self_collision:
             if self._check_self_collision(tf_links, geom_links):
@@ -279,3 +289,6 @@ class Robot:
         self.animation = animation.FuncAnimation(
             fig, update_lines, N, fargs=(joint_space_path, ls), interval=200, blit=False
         )
+
+    def ik(self, transformation_matrix) -> IKResult:
+        pass

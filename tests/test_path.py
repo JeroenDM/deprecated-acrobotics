@@ -1,13 +1,41 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from acrobotics.path.toleranced_number import TolerancedNumber, PathPointNumber
-from acrobotics.path.path_pt import TolEulerPt, FreeOrientationPt
+from acrobotics.path.path_pt import TolEulerPt, FreeOrientationPt, PathPt
 from acrobotics.samplers import SampleMethod
+from acrobotics.robot import Robot, IKResult
+from acrobotics.planning_new import PlanningSetting, SamplingType
 
 import pytest
 import numpy as np
 from numpy.testing import assert_almost_equal
 from pyquaternion import Quaternion
+
+IK_RESULT = IKResult(True, [np.ones(6), 2 * np.ones(6)])
+
+
+class DummyRobot(Robot):
+    def __init__(self, is_colliding=False):
+        self.is_colliding = is_colliding
+        self.ndof = 6
+
+    def is_in_collision(self, joint_position, scene=None):
+        return self.is_colliding
+
+    def ik(self, transform):
+        return IK_RESULT
+
+
+class TestPathPt:
+    def test_calc_ik(self):
+        samples = [[], []]
+        joint_solutions = PathPt._calc_ik(DummyRobot(), samples)
+        assert len(joint_solutions) == 4
+
+        assert_almost_equal(joint_solutions[0], IK_RESULT.solutions[0])
+        assert_almost_equal(joint_solutions[1], IK_RESULT.solutions[1])
+        assert_almost_equal(joint_solutions[2], IK_RESULT.solutions[0])
+        assert_almost_equal(joint_solutions[3], IK_RESULT.solutions[1])
 
 
 class TestEulerPt:
@@ -71,6 +99,37 @@ class TestEulerPt:
         # rpy is set to zeros, so all rotation matrices should be unit matrices
         for T in samples:
             assert_almost_equal(T[:3, :3], np.eye(3))
+
+    def setting_generator(self, sampling_type):
+        if sampling_type == SamplingType.GRID:
+            return PlanningSetting(
+                SamplingType.GRID, SampleMethod.random_uniform, 10, 10, 10
+            )
+        if sampling_type == SamplingType.INCREMENTAL:
+            return PlanningSetting(
+                SamplingType.INCREMENTAL, SampleMethod.random_uniform, 10, 10, 10
+            )
+        if sampling_type == SamplingType.MIN_INCREMENTAL:
+            return PlanningSetting(
+                SamplingType.MIN_INCREMENTAL, SampleMethod.random_uniform, 10, 10, 10
+            )
+
+    def test_to_joint_solutions(self):
+        for sampling_type in SamplingType:
+            x = TolerancedNumber(2, 4, num_samples=3)
+            pos = [x, 2, 3]
+            rpy = [4, 5, 6]
+            euler_pt = TolEulerPt(pos, rpy)
+            robot = DummyRobot(is_colliding=True)
+            settings = self.setting_generator(sampling_type)
+            if sampling_type is not SamplingType.MIN_INCREMENTAL:
+                joint_solutions = euler_pt.to_joint_solutions(robot, settings)
+                assert len(joint_solutions) == 0
+            else:
+                with pytest.raises(Exception) as info:
+                    joint_solutions = euler_pt.to_joint_solutions(robot, settings)
+                msg = "Maximum iterations reached in to_joint_solutions."
+                assert msg in str(info.value)
 
 
 class TestFreeOrientationPt:

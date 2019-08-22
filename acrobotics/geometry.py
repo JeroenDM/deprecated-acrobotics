@@ -129,7 +129,7 @@ class Shape:
         return lines
 
 
-class Collection:
+class Scene:
     """ Group Shapes and transforms for the shapes.
     This is used to create more complicated objects that just a box.
     """

@@ -47,10 +47,10 @@ plot_reference_frame(ax, tf=robot.fk(q0))
 # obstacle = Shape(0.1, 0.1, 0.5)
 # obstacle_tf = np.array([[1, 0, 0, 1.0], [0, 1, 0, 0.15], [0, 0, 1, 0.12], [0, 0, 0, 1]])
 #
-# # scene = Collection([table, obstacle],
+# # scene = Scene([table, obstacle],
 # #                    [table_tf, obstacle_tf])
-# scene = Collection([table], [table_tf])
-# # scene = Collection([], [])
+# scene = Scene([table], [table_tf])
+# # scene = Scene([], [])
 
 #%% PLAN PATH
 # from acrobotics.planning import cart_to_joint_no_redundancy

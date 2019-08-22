@@ -5,7 +5,7 @@ from acrobotics.util import get_default_axes3d, pose_x, plot_reference_frame
 from acrobotics.resources.robots import Kuka
 from acrobotics.resources.torch_model import torch
 from acrobotics.path import FreeOrientationPt
-from acrobotics.geometry import Shape, Collection
+from acrobotics.geometry import Shape, Scene
 from acrobotics.planning import cart_to_joint_tool_first_cc
 from acrobotics.planning import cart_to_joint_no_redundancy
 from acrobotics.planning import get_shortest_path
@@ -23,8 +23,8 @@ for s in np.linspace(0, 1, 5):
 floor_plane = Shape(0.5, 0.5, 0.1)
 floor_plane_tf = pose_x(0.0, 0.8, 0.0, 0.0)
 
-scene = Collection([floor_plane], [floor_plane_tf])
-# scene = Collection([], [])
+scene = Scene([floor_plane], [floor_plane_tf])
+# scene = Scene([], [])
 
 fig, ax = get_default_axes3d()
 q0 = [0, 1.5, 0, 0, 0, 0]

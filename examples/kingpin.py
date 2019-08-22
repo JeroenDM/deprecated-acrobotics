@@ -43,7 +43,7 @@ for s in np.linspace(0, 1, N_PATH):
 # ====================================
 # SCENE
 # ====================================
-from acrobotics.geometry import Shape, Collection
+from acrobotics.geometry import Shape, Scene
 
 table = Shape(0.5, 0.5, 0.1)
 l_bottom = Shape(WIDTH, LENGHT, TICKNESS)
@@ -76,7 +76,7 @@ obstacle_tf = np.array(
     ]
 )
 
-scene = Collection([table, l_bottom, l_top, obstacle], [tf0, tf1, tf2, obstacle_tf])
+scene = Scene([table, l_bottom, l_top, obstacle], [tf0, tf1, tf2, obstacle_tf])
 
 
 # ====================================

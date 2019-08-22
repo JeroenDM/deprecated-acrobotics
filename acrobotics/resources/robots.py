@@ -1,6 +1,6 @@
 import numpy as np
-from ..robot import Robot, DHLink, Link
-from acrobotics.geometry import Shape, Collection
+from ..robot import Robot, DHLink, Link, IKResult
+from acrobotics.geometry import Shape, Scene
 from ..util import pose_x, tf_inverse, translation
 
 pi = np.pi
@@ -11,9 +11,9 @@ class PlanarArm(Robot):
 
     def __init__(self, a1=1, a2=1, a3=1):
         geometry = [
-            Collection([Shape(-a1 / 2, 0.1, 0.1)], [np.eye(4)]),
-            Collection([Shape(-a2 / 2, 0.1, 0.1)], [np.eye(4)]),
-            Collection([Shape(-a3 / 2, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(-a1 / 2, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(-a2 / 2, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(-a3 / 2, 0.1, 0.1)], [np.eye(4)]),
         ]
         super().__init__(
             [
@@ -29,9 +29,9 @@ class SphericalArm(Robot):
 
     def __init__(self, d2=1):
         geometry = [
-            Collection([Shape(1, 0.1, 0.1)], [np.eye(4)]),
-            Collection([Shape(1, 0.1, 0.1)], [np.eye(4)]),
-            Collection([Shape(1, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(1, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(1, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(1, 0.1, 0.1)], [np.eye(4)]),
         ]
         super().__init__(
             [
@@ -47,9 +47,9 @@ class SphericalWrist(Robot):
 
     def __init__(self, d3=1):
         geometry = [
-            Collection([Shape(1, 0.1, 0.1)], [np.eye(4)]),
-            Collection([Shape(1, 0.1, 0.1)], [np.eye(4)]),
-            Collection([Shape(1, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(1, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(1, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(1, 0.1, 0.1)], [np.eye(4)]),
         ]
         super().__init__(
             [
@@ -62,7 +62,7 @@ class SphericalWrist(Robot):
         # cache ik solution array object for performance
         self.qsol = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
 
-    def ik(self, T):
+    def ik(self, T) -> IKResult:
         """ TODO add base frame correction
         """
         Rbase = self.tf_base[:3, :3]
@@ -84,10 +84,10 @@ class SphericalWrist(Robot):
         t2_2 = np.arctan2(-A, a[2])
         t3_2 = np.arctan2(-s[2], n[2])
 
-        qsol = self.qsol
-        qsol[0, 0], qsol[0, 1], qsol[0, 2] = t1_1, t2_1, t3_1
-        qsol[1, 0], qsol[1, 1], qsol[1, 2] = t1_2, t2_2, t3_2
-        return {"success": True, "sol": qsol}
+        q_sol = self.qsol
+        q_sol[0, 0], q_sol[0, 1], q_sol[0, 2] = t1_1, t2_1, t3_1
+        q_sol[1, 0], q_sol[1, 1], q_sol[1, 2] = t1_2, t2_2, t3_2
+        return IKResult(True, q_sol)
 
 
 class AnthropomorphicArm(Robot):
@@ -95,9 +95,9 @@ class AnthropomorphicArm(Robot):
 
     def __init__(self, a2=1, a3=1):
         geometry = [
-            Collection([Shape(0.1, 0.3, 0.3)], [translation(-0.05, 0, 0)]),
-            Collection([Shape(a2, 0.1, 0.1)], [translation(-a2 / 2, 0, 0)]),
-            Collection([Shape(a3, 0.1, 0.1)], [translation(-a3 / 2, 0, 0)]),
+            Scene([Shape(0.1, 0.3, 0.3)], [translation(-0.05, 0, 0)]),
+            Scene([Shape(a2, 0.1, 0.1)], [translation(-a2 / 2, 0, 0)]),
+            Scene([Shape(a3, 0.1, 0.1)], [translation(-a3 / 2, 0, 0)]),
         ]
         super().__init__(
             [
@@ -107,7 +107,7 @@ class AnthropomorphicArm(Robot):
             ]
         )
 
-    def ik(self, T):
+    def ik(self, T) -> IKResult:
         # ignore orientation
         px, py, pz = T[0, 3], T[1, 3], T[2, 3]
         l2, l3 = self.links[1].dh.a, self.links[2].dh.a
@@ -119,7 +119,7 @@ class AnthropomorphicArm(Robot):
         c3 = (Lps - l2 ** 2 - l3 ** 2) / (2 * l2 * l3)
 
         if c3 > (1 + tol) or c3 < -(1 + tol):
-            return {"success": False}
+            return IKResult(False)
         elif c3 > (1 - tol) or c3 < -(1 - tol):
             # almost 1 or -1 => fix it
             c3 = np.sign(c3)
@@ -157,7 +157,7 @@ class AnthropomorphicArm(Robot):
             [t1_2, t2_4, t3_2],
         ]
 
-        return {"success": True, "sol": q_sol}
+        return IKResult(True, q_sol)
 
 
 class Arm2(Robot):
@@ -167,9 +167,9 @@ class Arm2(Robot):
 
     def __init__(self, a1=1, a2=1, a3=1):
         geometry = [
-            Collection([Shape(a1, 0.1, 0.1)], [np.eye(4)]),
-            Collection([Shape(a2, 0.1, 0.1)], [np.eye(4)]),
-            Collection([Shape(a3, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(a1, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(a2, 0.1, 0.1)], [np.eye(4)]),
+            Scene([Shape(a3, 0.1, 0.1)], [np.eye(4)]),
         ]
         super().__init__(
             [
@@ -179,7 +179,7 @@ class Arm2(Robot):
             ]
         )
 
-    def ik(self, T):
+    def ik(self, T) -> IKResult:
         # compensate for tool frame
         #    if self.tf_tool is not None:
         #        print('Arm2: adapt for tool')
@@ -276,9 +276,9 @@ class Arm2(Robot):
             q_sol.append([q1_neg, q2_neg_b, q3_neg_b])
 
         if reachable_pos or reachable_neg:
-            return {"success": True, "sol": q_sol}
+            return IKResult(True, q_sol)
         else:
-            return {"success": False}
+            return IKResult(False)
 
 
 class Kuka(Robot):
@@ -308,18 +308,18 @@ class Kuka(Robot):
         # create robot
         super().__init__(
             [
-                Link(DHLink(a1, pi / 2, 0, 0), "r", Collection([s[0]], [tfs[0]])),
-                Link(DHLink(a2, 0, 0, 0), "r", Collection([s[1]], [tfs[1]])),
-                Link(DHLink(0, pi / 2, 0, 0), "r", Collection([s[2]], [tfs[2]])),
-                Link(DHLink(0, -pi / 2, d4, 0), "r", Collection([s[3]], [tfs[3]])),
-                Link(DHLink(0, pi / 2, 0, 0), "r", Collection([s[4]], [tfs[4]])),
-                Link(DHLink(0, 0, d6, 0), "r", Collection([s[5]], [tfs[5]])),
+                Link(DHLink(a1, pi / 2, 0, 0), "r", Scene([s[0]], [tfs[0]])),
+                Link(DHLink(a2, 0, 0, 0), "r", Scene([s[1]], [tfs[1]])),
+                Link(DHLink(0, pi / 2, 0, 0), "r", Scene([s[2]], [tfs[2]])),
+                Link(DHLink(0, -pi / 2, d4, 0), "r", Scene([s[3]], [tfs[3]])),
+                Link(DHLink(0, pi / 2, 0, 0), "r", Scene([s[4]], [tfs[4]])),
+                Link(DHLink(0, 0, d6, 0), "r", Scene([s[5]], [tfs[5]])),
             ]
         )
         self.arm = Arm2(a1=a1, a2=a2, a3=d4)
         self.wrist = SphericalWrist(d3=d6)
 
-    def ik(self, T):
+    def ik(self, T) -> IKResult:
         # copy transform to change it without affecting the T given
         Tw = T.copy()
         # compensate for base
@@ -332,9 +332,9 @@ class Kuka(Robot):
         v6 = np.dot(Tw[:3, :3], np.array([0, 0, d6]))
         Tw[:3, 3] = Tw[:3, 3] - v6
         sol_arm = self.arm.ik(Tw)
-        if sol_arm["success"]:
+        if sol_arm.success:
             solutions = []
-            for q_arm in sol_arm["sol"]:
+            for q_arm in sol_arm.solutions:
                 q_arm[2] = q_arm[2] + pi / 2
                 base_wrist = np.eye(4)
                 # get orientation from arm fk
@@ -343,12 +343,12 @@ class Kuka(Robot):
                 base_wrist[3, :3] = Tw[3, :3]
                 self.wrist.tf_base = base_wrist
                 sol_wrist = self.wrist.ik(Tw)
-                if sol_wrist["success"]:
-                    for q_wrist in sol_wrist["sol"]:
+                if sol_wrist.success:
+                    for q_wrist in sol_wrist.solutions:
                         solutions.append(np.hstack((q_arm, q_wrist)))
             if len(solutions) > 0:
-                return {"success": True, "sol": solutions}
-        return {"success": False}
+                return IKResult(True, solutions)
+        return IKResult(False)
 
 
 class KukaOnRail(Robot):
@@ -375,18 +375,18 @@ class KukaOnRail(Robot):
         # create robot
         super().__init__(
             [
-                Link(DHLink(0, pi / 2, 0, 0), "p", Collection([s[0]], [tfs[0]])),
-                Link(DHLink(a1, pi / 2, 0, 0), "r", Collection([s[1]], [tfs[1]])),
-                Link(DHLink(a2, 0, 0, 0), "r", Collection([s[2]], [tfs[2]])),
-                Link(DHLink(0, pi / 2, 0, 0), "r", Collection([s[3]], [tfs[3]])),
-                Link(DHLink(0, -pi / 2, d4, 0), "r", Collection([s[4]], [tfs[4]])),
-                Link(DHLink(0, pi / 2, 0, 0), "r", Collection([s[5]], [tfs[5]])),
-                Link(DHLink(0, 0, d6, 0), "r", Collection([s[6]], [tfs[6]])),
+                Link(DHLink(0, pi / 2, 0, 0), "p", Scene([s[0]], [tfs[0]])),
+                Link(DHLink(a1, pi / 2, 0, 0), "r", Scene([s[1]], [tfs[1]])),
+                Link(DHLink(a2, 0, 0, 0), "r", Scene([s[2]], [tfs[2]])),
+                Link(DHLink(0, pi / 2, 0, 0), "r", Scene([s[3]], [tfs[3]])),
+                Link(DHLink(0, -pi / 2, d4, 0), "r", Scene([s[4]], [tfs[4]])),
+                Link(DHLink(0, pi / 2, 0, 0), "r", Scene([s[5]], [tfs[5]])),
+                Link(DHLink(0, 0, d6, 0), "r", Scene([s[6]], [tfs[6]])),
             ]
         )
         self.kuka = Kuka(a1=0.18, a2=0.6, d4=0.62, d6=0.115)
 
-    def ik(self, T, q_fixed):
+    def ik(self, T, q_fixed) -> IKResult:
         # copy transform to change it without affecting the T given
         Tw = T.copy()
         # compensate for base
@@ -400,13 +400,13 @@ class KukaOnRail(Robot):
         self.kuka.tf_base = T1
 
         res = self.kuka.ik(Tw)
-        if res["success"]:
+        if res.success:
             q_sol = []
-            for qi in res["sol"]:
+            for qi in res.solutions:
                 q_sol.append(np.hstack((q_fixed, qi)))
-            return {"success": True, "sol": q_sol}
+            return IKResult(True, q_sol)
         else:
-            return {"success": False}
+            return IKResult(False)
 
 
 class Puma(Robot):
@@ -422,12 +422,12 @@ class Puma(Robot):
 
     def __init__(self, a3=0.432, a4=0.0203, d1=0.6, d3=0.1245, d4=0.432):
         geometry = [
-            Collection(Shape(0.1, 0.1, 0.1), np.eye(4)),
-            Collection(Shape(0.1, 0.1, 0.1), np.eye(4)),
-            Collection(Shape(0.1, 0.1, 0.1), np.eye(4)),
-            Collection(Shape(0.1, 0.1, 0.1), np.eye(4)),
-            Collection(Shape(0.1, 0.1, 0.1), np.eye(4)),
-            Collection(Shape(0.1, 0.1, 0.1), np.eye(4)),
+            Scene(Shape(0.1, 0.1, 0.1), np.eye(4)),
+            Scene(Shape(0.1, 0.1, 0.1), np.eye(4)),
+            Scene(Shape(0.1, 0.1, 0.1), np.eye(4)),
+            Scene(Shape(0.1, 0.1, 0.1), np.eye(4)),
+            Scene(Shape(0.1, 0.1, 0.1), np.eye(4)),
+            Scene(Shape(0.1, 0.1, 0.1), np.eye(4)),
         ]
         super().__init__(
             [

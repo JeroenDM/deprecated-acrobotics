@@ -6,6 +6,9 @@ from ..util import plot_reference_frame, create_grid, rpy_to_rotation_matrix
 from ..samplers import Sampler
 from typing import List
 from ..samplers import generate_quaternions, sample_SO3, SampleMethod
+from ..robot import Robot
+from ..planning_new import PlanningSetting, SamplingType
+from ..geometry import Scene
 
 
 class PathPt(ABC):
@@ -54,6 +57,50 @@ class PathPt(ABC):
 
         # convert position and euler angles to transforms
         return [self.to_transform(sample) for sample in samples]
+
+    def to_joint_solutions(
+        self, robot: Robot, settings: PlanningSetting, scene: Scene = None
+    ) -> np.ndarray:
+        if settings.sampling_type == SamplingType.GRID:
+            samples = self.sample_grid()
+            joint_solutions = self._calc_ik(robot, samples)
+
+        elif settings.sampling_type == SamplingType.INCREMENTAL:
+            samples = self.sample_incremental(
+                settings.num_samples, settings.sample_method
+            )
+            joint_solutions = self._calc_ik(robot, samples)
+
+        elif settings.sampling_type == SamplingType.MIN_INCREMENTAL:
+            joint_solutions = []
+            for _ in range(settings.max_search_iters):
+                samples = self.sample_incremental(
+                    settings.step_size, settings.sample_method
+                )
+                temp_joint_solutions = self._calc_ik(robot, samples)
+                for joint_position in temp_joint_solutions:
+                    if not robot.is_in_collision(joint_position, scene):
+                        joint_solutions.append(joint_position)
+                if len(joint_solutions) >= settings.desired_num_samples:
+                    return joint_solutions
+            raise Exception("Maximum iterations reached in to_joint_solutions.")
+        else:
+            raise NotImplementedError
+        collision_free_js = []
+        for joint_position in joint_solutions:
+            if not robot.is_in_collision(joint_position, scene):
+                collision_free_js.append(joint_position)
+
+        return np.array(collision_free_js)
+
+    @staticmethod
+    def _calc_ik(robot, samples) -> List:
+        joint_solutions = []
+        for transform in samples:
+            ik_result = robot.ik(transform)
+            if ik_result.success:
+                joint_solutions.extend(ik_result.solutions)
+        return joint_solutions
 
     @abstractmethod
     def to_transform(self, values) -> np.array:

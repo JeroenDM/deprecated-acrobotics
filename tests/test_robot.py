@@ -18,7 +18,7 @@ from acrobotics.resources.robots import (
     Kuka,
     KukaOnRail,
 )
-from acrobotics.geometry import Shape, Collection
+from acrobotics.geometry import Shape, Scene
 from acrobotics.util import pose_x
 from .kuka_forward_kinematics import fk_kuka
 
@@ -222,11 +222,11 @@ class TestCollisionChecking:
     def test_kuka_collision(self):
         bot = Kuka()
         q0 = [0, pi / 2, 0, 0, 0, 0]
-        obj1 = Collection(
+        obj1 = Scene(
             [Shape(0.2, 0.3, 0.5), Shape(0.1, 0.3, 0.1)],
             [pose_x(0, 0.75, 0, 0.5), pose_x(0, 0.75, 0.5, 0.5)],
         )
-        obj2 = Collection(
+        obj2 = Scene(
             [Shape(0.2, 0.3, 0.5), Shape(0.1, 0.3, 0.1)],
             [pose_x(0, 0.3, -0.7, 0.5), pose_x(0, 0.75, 0.5, 0.5)],
         )
@@ -244,7 +244,7 @@ class TestIK:
         for qi in q_rand:
             T1 = bot.fk(qi)
             resi = bot.ik(T1)
-            for q_sol in resi["sol"]:
+            for q_sol in resi.solutions:
                 p2 = bot.fk(q_sol)[:3, 3]
                 assert_almost_equal(T1[:3, 3], p2)
 
@@ -255,7 +255,7 @@ class TestIK:
         for qi in q_rand:
             T1 = bot.fk(qi)
             resi = bot.ik(T1)
-            for q_sol in resi["sol"]:
+            for q_sol in resi.solutions:
                 R2 = bot.fk(q_sol)[:3, :3]
                 assert_almost_equal(T1[:3, :3], R2)
 
@@ -267,7 +267,7 @@ class TestIK:
         for qi in q_rand:
             T1 = bot.fk(qi)
             resi = bot.ik(T1)
-            for q_sol in resi["sol"]:
+            for q_sol in resi.solutions:
                 R2 = bot.fk(q_sol)[:3, :3]
                 assert_almost_equal(T1[:3, :3], R2)
 
@@ -278,8 +278,8 @@ class TestIK:
         for qi in q_rand:
             T1 = bot.fk(qi)
             resi = bot.ik(T1)
-            if resi["success"]:
-                for q_sol in resi["sol"]:
+            if resi.success:
+                for q_sol in resi.solutions:
                     p2 = bot.fk(q_sol)[:3, 3]
                     assert_almost_equal(T1[:3, 3], p2)
             else:
@@ -312,8 +312,8 @@ class TestIK:
             print(qi)
             T1 = bot.fk(qi)
             resi = bot.ik(T1)
-            if resi["success"]:
-                for q_sol in resi["sol"]:
+            if resi.success:
+                for q_sol in resi.solutions:
                     print(q_sol)
                     T2 = bot.fk(q_sol)
                     assert_almost_equal(T1, T2)
@@ -331,8 +331,8 @@ class TestIK:
             print(qi)
             T1 = bot.fk(qi)
             resi = bot.ik(T1)
-            if resi["success"]:
-                for q_sol in resi["sol"]:
+            if resi.success:
+                for q_sol in resi.solutions:
                     print(q_sol)
                     T2 = bot.fk(q_sol)
                     assert_almost_equal(T1, T2)
@@ -350,8 +350,8 @@ class TestIK:
             print(qi)
             T1 = bot.fk(qi)
             resi = bot.ik(T1)
-            if resi["success"]:
-                for q_sol in resi["sol"]:
+            if resi.success:
+                for q_sol in resi.solutions:
                     print(q_sol)
                     T2 = bot.fk(q_sol)
                     assert_almost_equal(T1, T2)
@@ -368,8 +368,8 @@ class TestIK:
             print(qi)
             T1 = bot.fk(qi)
             resi = bot.ik(T1, qi[0])
-            if resi["success"]:
-                for q_sol in resi["sol"]:
+            if resi.success:
+                for q_sol in resi.solutions:
                     print(q_sol)
                     T2 = bot.fk(q_sol)
                     assert_almost_equal(T1, T2)
@@ -387,8 +387,8 @@ class TestIK:
             print(qi)
             T1 = bot.fk(qi)
             resi = bot.ik(T1, qi[0])
-            if resi["success"]:
-                for q_sol in resi["sol"]:
+            if resi.success:
+                for q_sol in resi.solutions:
                     print(q_sol)
                     T2 = bot.fk(q_sol)
                     assert_almost_equal(T1, T2)

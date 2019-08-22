@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from numpy.testing import assert_almost_equal
-from acrobotics.geometry import Shape, Collection
+from acrobotics.geometry import Shape, Scene
 from acrobotics.util import pose_z
 
 tf_identity = np.eye(4)
@@ -134,11 +134,11 @@ class TestShape:
         assert True
 
 
-class TestCollection:
+class TestScene:
     def test_polyhedron(self):
         b = Shape(1, 2, 3)
         tf = pose_z(0.3, 0.1, 0.2, -0.3)
-        col = Collection([b], [tf])
+        col = Scene([b], [tf])
         polys = col.get_polyhedrons()
         assert len(polys) == 1
         Aa = np.array(

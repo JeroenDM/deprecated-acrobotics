@@ -4,7 +4,7 @@ A box open on the side.
 A path inside this box with tolerance on orientation.
 """
 import numpy as np
-from ..geometry import Shape, Collection
+from ..geometry import Shape, Scene
 from ..util import pose_x
 from ..path import TolerancedNumber, TolEulerPt
 
@@ -26,7 +26,7 @@ workpiece_tf = [pose_x(0, 0, 0, t/2),
                 pose_x(0, l/2 - t/2, 0, h/2 + t),
                 pose_x(0, -l/2 + t/2, 0, h/2 + t)]
 
-workpiece = Collection([bottom, top, back, left, right], workpiece_tf)
+workpiece = Scene([bottom, top, back, left, right], workpiece_tf)
 
 # welding torch path
 N = 10
