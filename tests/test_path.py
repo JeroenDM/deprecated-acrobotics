@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from acrobotics.path.toleranced_number import TolerancedNumber, PathPointNumber
+from acrobotics.path.path_pt import TolEulerPt, FreeOrientationPt
 from acrobotics.samplers import SampleMethod
 
 import pytest
@@ -70,6 +71,18 @@ class TestEulerPt:
         # rpy is set to zeros, so all rotation matrices should be unit matrices
         for T in samples:
             assert_almost_equal(T[:3, :3], np.eye(3))
+
+
+class TestFreeOrientationPt:
+    def test_create(self):
+        point = FreeOrientationPt([1, 2, 3])
+
+    def test_sample_incremental(self):
+        point = FreeOrientationPt([1, 2, 3])
+        samples = point.sample_incremental(5, SampleMethod.random_uniform)
+        assert len(samples) == 5
+        for T in samples:
+            assert_almost_equal(T[:3, 3], np.array([1, 2, 3]))
 
 
 class TestPathPointNumber:

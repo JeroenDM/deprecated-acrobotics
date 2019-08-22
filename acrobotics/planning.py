@@ -351,38 +351,38 @@ def cart_to_joint_incremental(robot, path, scene, min_samples=50, max_tries=1000
     return Q
 
 
-def cart_to_joint_tool_first_cc(robot, path, scene):
-    """ cartesian path to joint solutions
+# def cart_to_joint_tool_first_cc(robot, path, scene):
+#     """ cartesian path to joint solutions
 
-    In this vesion the tool is first checked for collision for every
-    sample before solving the inverse kinematics and checking for
-    collision with the rest of the robot.
-    """
-    # no tool then use last link as a tool for collision checking
-    shape_last_link = robot.links[-1].shape
-    tf_last_link = robot.links[-1].tf_shape
-    tf_move = np.eye(4)
-    Q = []
-    for i, tp in enumerate(path):
-        print("Processing point " + str(i) + "/" + str(len(path)))
-        q_sol = []
-        for Ti in tp.get_samples(1000, rep="transform"):
-            # move last link to Ti and check for collision
-            tf_move = np.dot(tf_last_link, Ti)
-            shape_last_link.set_transform(tf_move)
-            if shape_last_link.is_in_collision_multi(scene.get_shapes()):
-                continue
-            sol = robot.ik(Ti)
-            if sol["success"]:
-                for qi in sol["sol"]:
-                    if not robot.is_in_collision(qi, scene):
-                        q_sol.append(qi)
+#     In this vesion the tool is first checked for collision for every
+#     sample before solving the inverse kinematics and checking for
+#     collision with the rest of the robot.
+#     """
+#     # no tool then use last link as a tool for collision checking
+#     shape_last_link = robot.links[-1].shape
+#     tf_last_link = robot.links[-1].tf_shape
+#     tf_move = np.eye(4)
+#     Q = []
+#     for i, tp in enumerate(path):
+#         print("Processing point " + str(i) + "/" + str(len(path)))
+#         q_sol = []
+#         for Ti in tp.get_samples(1000, rep="transform"):
+#             # move last link to Ti and check for collision
+#             tf_move = np.dot(tf_last_link, Ti)
+#             shape_last_link.set_transform(tf_move)
+#             if shape_last_link.is_in_collision_multi(scene.get_shapes()):
+#                 continue
+#             sol = robot.ik(Ti)
+#             if sol["success"]:
+#                 for qi in sol["sol"]:
+#                     if not robot.is_in_collision(qi, scene):
+#                         q_sol.append(qi)
 
-        if len(q_sol) > 0:
-            Q.append(np.vstack(q_sol).astype("float32"))
-        else:
-            Q.append([])
-    return Q
+#         if len(q_sol) > 0:
+#             Q.append(np.vstack(q_sol).astype("float32"))
+#         else:
+#             Q.append([])
+#     return Q
 
 
 def get_shortest_path(Q, method="bfs", weights=None):

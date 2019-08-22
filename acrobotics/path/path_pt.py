@@ -93,8 +93,32 @@ class TolEulerPt(PathPt):
         return T
 
 
-# class FreeOrientationPt(PathPt):
-#     pass
+class FreeOrientationPt(PathPt):
+    """
+    Orientation completely free, position is fixed.
+    A nominal orientation is optional.
+    """
+
+    def __init__(self, pos, nominal_quaternion=None):
+        self.pos = np.array(pos)
+        self.sample_dim = 3  #  fixed to generate uniform quaternions
+        self.sampler = Sampler()
+
+        if nominal_quaternion is not None:
+            raise NotImplementedError
+
+    def sample_grid(self):
+        raise NotImplementedError
+
+    def sample_incremental(self, num_samples, method: SampleMethod):
+        R = self.sampler.sample(num_samples, self.sample_dim, method)
+        quaternions = generate_quaternions(R)
+        return [self.to_transform(quat) for quat in quaternions]
+
+    def to_transform(self, quat):
+        transform = quat.transformation_matrix
+        transform[:3, 3] = self.pos
+        return transform
 
 
 # class TolPositionPt(PathPt):
@@ -131,40 +155,40 @@ class TolEulerPt(PathPt):
 #         return samples
 
 
-class FreeOrientationPt:
-    """ Trajectory point with fixed position and free orientation.
-    Work in progress
-    """
+# class FreeOrientationPt:
+#     """ Trajectory point with fixed position and free orientation.
+#     Work in progress
+#     """
 
-    def __init__(self, position):
-        self.p = np.array(position)
+#     def __init__(self, position):
+#         self.p = np.array(position)
 
-    def get_samples(self, num_samples, dist=None, **kwargs):
-        """ Sample orientation (position is fixed)
-        """
-        rep = "rpy"
-        if "rep" in kwargs:
-            rep = kwargs["rep"]
+#     def get_samples(self, num_samples, dist=None, **kwargs):
+#         """ Sample orientation (position is fixed)
+#         """
+#         rep = "rpy"
+#         if "rep" in kwargs:
+#             rep = kwargs["rep"]
 
-        if rep == "rpy":
-            rpy = np.array(sample_SO3(n=num_samples, **kwargs))
-            pos = np.tile(self.p, (num_samples, 1))
-            return np.hstack((pos, rpy))
-        elif rep == "transform":
-            Ts = np.array(sample_SO3(n=num_samples, **kwargs))
-            for Ti in Ts:
-                Ti[:3, 3] = self.p
-            return Ts
-        elif rep == "quat":
-            return sample_SO3(n=num_samples, **kwargs)
-        else:
-            raise ValueError("Invalid argument for rep: {}".format(rep))
+#         if rep == "rpy":
+#             rpy = np.array(sample_SO3(n=num_samples, **kwargs))
+#             pos = np.tile(self.p, (num_samples, 1))
+#             return np.hstack((pos, rpy))
+#         elif rep == "transform":
+#             Ts = np.array(sample_SO3(n=num_samples, **kwargs))
+#             for Ti in Ts:
+#                 Ti[:3, 3] = self.p
+#             return Ts
+#         elif rep == "quat":
+#             return sample_SO3(n=num_samples, **kwargs)
+#         else:
+#             raise ValueError("Invalid argument for rep: {}".format(rep))
 
-    def __str__(self):
-        return str(self.p)
+#     def __str__(self):
+#         return str(self.p)
 
-    def plot(self, ax):
-        ax.plot([self.p[0]], [self.p[1]], [self.p[2]], "o", c="r")
+#     def plot(self, ax):
+#         ax.plot([self.p[0]], [self.p[1]], [self.p[2]], "o", c="r")
 
 
 class TolOrientationPt:

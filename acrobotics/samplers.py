@@ -8,6 +8,7 @@ class SampleMethod(Enum):
     random_uniform = 0
     deterministic_uniform = 1
 
+
 class Sampler:
     def __init__(self):
         self.halton_sampler: HaltonSampler = None
@@ -76,15 +77,31 @@ class HaltonSampler:
         return np.array(seq).T
 
 
-def sample_SO3(n=10, rep="rpy", method="random"):
+def generate_quaternions(random_numbers):
     """Generate a random unit quaternion.
 
     Uniformly distributed across the rotation space
     As per: http://planning.cs.uiuc.edu/node198.html
     and code from http://kieranwynn.github.io/pyquaternion
     """
+    r1, r2, r3 = random_numbers.T
+
+    q1 = np.sqrt(1.0 - r1) * (np.sin(2 * np.pi * r2))
+    q2 = np.sqrt(1.0 - r1) * (np.cos(2 * np.pi * r2))
+    q3 = np.sqrt(r1) * (np.sin(2 * np.pi * r3))
+    q4 = np.sqrt(r1) * (np.cos(2 * np.pi * r3))
+
+    return [Quaternion(q1[i], q2[i], q3[i], q4[i]) for i in range(len(r1))]
+
+
+def sample_SO3(n=10, rep="rpy", method="random"):
+    """Generate a random unit quaternion.
+    Uniformly distributed across the rotation space
+    As per: http://planning.cs.uiuc.edu/node198.html
+    and code from http://kieranwynn.github.io/pyquaternion
+    """
     if method is "random":
-        r1, r2, r3 = np.random.rand(3, n)
+        r1, r2, r3 = np.random.random((3, n))
     elif method is "halton":
         hs = HaltonSampler(3)
         r1, r2, r3 = (hs.get_samples(n)).T
