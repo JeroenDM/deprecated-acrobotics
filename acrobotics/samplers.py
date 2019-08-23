@@ -2,11 +2,7 @@ import numpy as np
 from numpy.random import uniform
 from .pyquat_extended import QuaternionExtended as Quaternion
 from enum import Enum
-
-
-class SampleMethod(Enum):
-    random_uniform = 0
-    deterministic_uniform = 1
+from .types.sample_method import SampleMethod
 
 
 class Sampler:

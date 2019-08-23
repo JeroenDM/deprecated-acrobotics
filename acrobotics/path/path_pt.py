@@ -1,14 +1,16 @@
 import numpy as np
 from abc import ABC, abstractmethod
-from ..pyquat_extended import QuaternionExtended as Quaternion
+from acrobotics.pyquat_extended import QuaternionExtended as Quaternion
 from .toleranced_number import TolerancedNumber, PathPointNumber
-from ..util import plot_reference_frame, create_grid, rpy_to_rotation_matrix
+from acrobotics.util import plot_reference_frame, create_grid, rpy_to_rotation_matrix
 from ..samplers import Sampler
 from typing import List
-from ..samplers import generate_quaternions, sample_SO3, SampleMethod
-from ..robot import Robot
-from ..planning_new import PlanningSetting, SamplingType
-from ..geometry import Scene
+from acrobotics.samplers import generate_quaternions, sample_SO3, SampleMethod
+from acrobotics.robot import Robot
+from ..types.sampling_types import SamplingType
+from ..types.sample_method import SampleMethod
+from acrobotics.geometry import Scene
+from ..planning_setting import PlanningSetting
 
 
 class PathPt(ABC):
