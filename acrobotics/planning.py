@@ -448,7 +448,7 @@ def get_shortest_path(Q, method="bfs", weights=None):
     else:
         res = []
         for k, i in zip(range(n_path), p_i):
-            # TODO ugly all the "unsave" typecasting
+            # TODO ugly all the "unsafe" typecasting
             qki = Q[k][i].astype("float64")
             res.append(qki)
 
