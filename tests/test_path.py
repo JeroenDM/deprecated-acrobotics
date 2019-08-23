@@ -164,3 +164,19 @@ class TestTolerancedNumber:
         a1 = a.discretize()
         d1 = [0, 1, 2, 3, 4]
         assert_almost_equal(a1, d1)
+
+    def test_calc_reduced_bounds(self):
+        x = TolerancedNumber(2, 4)
+        lower, upper = x.calc_reduced_bounds(3, 2)
+        assert_almost_equal(lower, 2.5)
+        assert_almost_equal(upper, 3.5)
+
+        x = TolerancedNumber(-4, -1)
+        lower, upper = x.calc_reduced_bounds(-3, 10)
+        assert_almost_equal(lower, -3.15)
+        assert_almost_equal(upper, -2.85)
+
+        x = TolerancedNumber(-3, 7)
+        lower, upper = x.calc_reduced_bounds(4, 5)
+        assert_almost_equal(lower, 3)
+        assert_almost_equal(upper, 5)

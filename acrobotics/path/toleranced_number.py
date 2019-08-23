@@ -5,9 +5,9 @@ hence the TolerancedNumber class.
 
 import numpy as np
 
-from ..util import create_grid, rot_x, rot_y, rot_z
-from ..util import plot_reference_frame
-from ..samplers import Sampler, sample_SO3
+from acrobotics.util import create_grid, rot_x, rot_y, rot_z
+from acrobotics.util import plot_reference_frame
+from acrobotics.samplers import Sampler, sample_SO3
 
 
 class PathPointNumber:
@@ -49,4 +49,10 @@ class TolerancedNumber(PathPointNumber):
 
     def discretize(self):
         return np.linspace(self.lower, self.upper, self.num_samples)
+
+    def calc_reduced_bounds(self, reference_value, reduction_factor):
+        range_width = abs(self.upper - self.lower) / reduction_factor
+        new_lower = max(reference_value - range_width / 2, self.lower)
+        new_upper = min(reference_value + range_width / 2, self.upper)
+        return new_lower, new_upper
 
