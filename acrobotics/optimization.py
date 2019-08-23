@@ -10,7 +10,7 @@ def get_optimal_path(path, robot, scene=None, q_init=None, max_iters=100):
     if q_init is None:
         q_init = np.zeros((N, robot.ndof))
 
-    xyz = [tp.p for tp in path]
+    xyz = [tp.pos for tp in path]
 
     opti = ca.Opti()
     q = opti.variable(N, 6)  #  joint variables along path
