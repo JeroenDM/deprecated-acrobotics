@@ -1,5 +1,5 @@
-from .types.sampling_types import SamplingType
-from .types.sample_method import SampleMethod
+from .types import SamplingType
+from .types import SampleMethod
 
 
 class PlanningSetting:

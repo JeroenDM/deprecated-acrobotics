@@ -4,7 +4,7 @@ from acrobotics.path.toleranced_number import TolerancedNumber, PathPointNumber
 from acrobotics.path.path_pt import TolEulerPt, FreeOrientationPt, PathPt
 from acrobotics.samplers import SampleMethod
 from acrobotics.robot import Robot, IKResult
-from acrobotics.types.sampling_types import SamplingType
+from acrobotics.types import SamplingType
 from acrobotics.planning_setting import PlanningSetting
 
 import pytest

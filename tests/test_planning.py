@@ -1,6 +1,6 @@
 from acrobotics.planning_new import path_to_joint_solutions, find_shortest_joint_path
-from acrobotics.types.sampling_types import SamplingType
-from acrobotics.types.sample_method import SampleMethod
+from acrobotics.types import SamplingType
+from acrobotics.types import SampleMethod
 from acrobotics.planning_setting import PlanningSetting
 from acrobotics.path.path_pt import FreeOrientationPt
 from acrobotics.geometry import Shape, Scene

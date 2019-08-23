@@ -7,8 +7,8 @@ from ..samplers import Sampler
 from typing import List
 from acrobotics.samplers import generate_quaternions, sample_SO3, SampleMethod
 from acrobotics.robot import Robot
-from ..types.sampling_types import SamplingType
-from ..types.sample_method import SampleMethod
+from ..types import SamplingType
+from ..types import SampleMethod
 from acrobotics.geometry import Scene
 from ..planning_setting import PlanningSetting
 

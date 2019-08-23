@@ -2,7 +2,7 @@ import numpy as np
 from numpy.random import uniform
 from .pyquat_extended import QuaternionExtended as Quaternion
 from enum import Enum
-from .types.sample_method import SampleMethod
+from .types import SampleMethod
 
 
 class Sampler:

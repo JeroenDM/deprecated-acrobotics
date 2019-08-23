@@ -55,4 +55,3 @@ class TolerancedNumber(PathPointNumber):
         new_lower = max(reference_value - range_width / 2, self.lower)
         new_upper = min(reference_value + range_width / 2, self.upper)
         return new_lower, new_upper
-
