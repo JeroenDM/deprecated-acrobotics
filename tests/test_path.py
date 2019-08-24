@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from acrobotics.path.toleranced_number import TolerancedNumber, PathPointNumber
-from acrobotics.path.path_pt import TolEulerPt, FreeOrientationPt, PathPt
+from acrobotics.path.toleranced_number import (
+    TolerancedNumber,
+    FixedNumber,
+    TolerancedQuaternion,
+)
+from acrobotics.path.path_pt import TolEulerPt, PathPt, TolPositionPt, TolQuatPt
 from acrobotics.samplers import SampleMethod
 from acrobotics.robot import Robot, IKResult
 from acrobotics.types import SamplingType
@@ -10,7 +14,7 @@ from acrobotics.planning_setting import PlanningSetting
 import pytest
 import numpy as np
 from numpy.testing import assert_almost_equal
-from pyquaternion import Quaternion
+from acrobotics.pyquat_extended import QuaternionExtended as Quaternion
 
 IK_RESULT = IKResult(True, [np.ones(6), 2 * np.ones(6)])
 
@@ -37,6 +41,51 @@ class TestPathPt:
         assert_almost_equal(joint_solutions[1], IK_RESULT.solutions[1])
         assert_almost_equal(joint_solutions[2], IK_RESULT.solutions[0])
         assert_almost_equal(joint_solutions[3], IK_RESULT.solutions[1])
+
+
+class TestTolPositionPt:
+    def test_create(self):
+        TolPositionPt([1, 2, 3], Quaternion())
+
+    def test_sample_grid(self):
+        x = TolerancedNumber(0, 1, num_samples=2)
+        y = TolerancedNumber(0, 1, num_samples=2)
+        z = 1
+        q = Quaternion()
+
+        point = TolPositionPt([x, y, z], q)
+        grid = point.sample_grid()
+        position_samples = [[0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]]
+        for pos, T in zip(position_samples, grid):
+            assert_almost_equal(pos, T[:3, 3])
+
+
+class TestTolQuatPt:
+    def test_create(self):
+        q = TolerancedQuaternion(Quaternion(), 0.5)
+        TolQuatPt([1, 2, 3], q)
+
+    def test_sample_incremental(self):
+        method = SampleMethod.random_uniform
+        distance = 0.1
+        tolquat = TolerancedQuaternion(Quaternion(), distance)
+        point = TolQuatPt([1, 2, 3], tolquat)
+        samples = point.sample_incremental(100, method)
+
+        for tf in samples:
+            newquat = Quaternion(matrix=tf)
+            assert Quaternion.distance(tolquat.quat, newquat) <= distance
+
+    def test_to_transform(self):
+        distance = 0.1
+        tolquat = TolerancedQuaternion(Quaternion(), distance)
+        point = TolQuatPt([1, 2, 3], tolquat)
+        quat = Quaternion([1, 0, 0, 0])
+
+        tf = point.to_transform(quat)
+        assert_almost_equal(
+            [[1, 0, 0, 1], [0, 1, 0, 2], [0, 0, 1, 3], [0, 0, 0, 1]], tf
+        )
 
 
 class TestEulerPt:
@@ -108,11 +157,11 @@ class TestEulerPt:
             )
         if sampling_type == SamplingType.INCREMENTAL:
             return PlanningSetting(
-                SamplingType.INCREMENTAL, SampleMethod.random_uniform, 10, 10, 10
+                SamplingType.INCREMENTAL, SampleMethod.random_uniform, 10, 10, 10, 2
             )
         if sampling_type == SamplingType.MIN_INCREMENTAL:
             return PlanningSetting(
-                SamplingType.MIN_INCREMENTAL, SampleMethod.random_uniform, 10, 10, 10
+                SamplingType.MIN_INCREMENTAL, SampleMethod.random_uniform, 10, 10, 10, 2
             )
 
     def test_to_joint_solutions(self):
@@ -133,33 +182,14 @@ class TestEulerPt:
                 assert msg in str(info.value)
 
 
-class TestFreeOrientationPt:
+class TestFixedNumber:
     def test_create(self):
-        point = FreeOrientationPt([1, 2, 3])
-
-    def test_sample_incremental(self):
-        point = FreeOrientationPt([1, 2, 3])
-        samples = point.sample_incremental(5, SampleMethod.random_uniform)
-        assert len(samples) == 5
-        for T in samples:
-            assert_almost_equal(T[:3, 3], np.array([1, 2, 3]))
-
-
-class TestPathPointNumber:
-    def test_create(self):
-        a = PathPointNumber(5)
+        a = FixedNumber(5)
         assert a.nominal == 5
         assert a.discretize() == 5
 
 
 class TestTolerancedNumber:
-    def test_nominal_outside_bounds_error(self):
-        with pytest.raises(ValueError) as info:
-            TolerancedNumber(0, 1, nominal=1.5)
-        # check whether the error message is present
-        msg = "Nominal value must respect the bounds."
-        assert msg in str(info.value)
-
     def test_get_initial_sampled_range(self):
         a = TolerancedNumber(0, 4, num_samples=5)
         a1 = a.discretize()
@@ -168,16 +198,16 @@ class TestTolerancedNumber:
 
     def test_calc_reduced_bounds(self):
         x = TolerancedNumber(2, 4)
-        lower, upper = x.calc_reduced_bounds(3, 2)
-        assert_almost_equal(lower, 2.5)
-        assert_almost_equal(upper, 3.5)
+        x.reduce_bounds(3, 2)
+        assert_almost_equal(x.lower, 2.5)
+        assert_almost_equal(x.upper, 3.5)
 
         x = TolerancedNumber(-4, -1)
-        lower, upper = x.calc_reduced_bounds(-3, 10)
-        assert_almost_equal(lower, -3.15)
-        assert_almost_equal(upper, -2.85)
+        x.reduce_bounds(-3, 10)
+        assert_almost_equal(x.lower, -3.15)
+        assert_almost_equal(x.upper, -2.85)
 
         x = TolerancedNumber(-3, 7)
-        lower, upper = x.calc_reduced_bounds(4, 5)
-        assert_almost_equal(lower, 3)
-        assert_almost_equal(upper, 5)
+        x.reduce_bounds(4, 5)
+        assert_almost_equal(x.lower, 3)
+        assert_almost_equal(x.upper, 5)

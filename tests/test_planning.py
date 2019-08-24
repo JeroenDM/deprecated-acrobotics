@@ -1,9 +1,11 @@
-from acrobotics.planning_new import path_to_joint_solutions, find_shortest_joint_path
+from acrobotics.planning_new import Planner
 from acrobotics.types import SamplingType
 from acrobotics.types import SampleMethod
 from acrobotics.planning_setting import PlanningSetting
-from acrobotics.path.path_pt import FreeOrientationPt
 from acrobotics.geometry import Shape, Scene
+from acrobotics.path.path_pt import TolQuatPt
+from acrobotics.path.toleranced_number import TolerancedQuaternion
+from acrobotics.pyquat_extended import QuaternionExtended as Quaternion
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,7 +22,9 @@ class TestPlanning:
             xi = 0.8
             yi = s * 0.2 + (1 - s) * (-0.2)
             zi = 0.2
-            path_ori_free.append(FreeOrientationPt([xi, yi, zi]))
+            path_ori_free.append(
+                TolQuatPt([xi, yi, zi], TolerancedQuaternion(Quaternion(), 2.0))
+            )
 
         table = Shape(0.5, 0.5, 0.1)
         table_tf = np.array(
@@ -32,15 +36,20 @@ class TestPlanning:
         # robot.tool = torch
 
         settings = PlanningSetting(
-            SamplingType.INCREMENTAL, SampleMethod.random_uniform, 500
+            SamplingType.INCREMENTAL,
+            SampleMethod.random_uniform,
+            500,
+            tolerance_reduction_factor=2,
         )
 
-        joint_positions = path_to_joint_solutions(
-            path_ori_free, robot, settings, scene1
-        )
-        joint_path = find_shortest_joint_path(joint_positions)
+        planner = Planner(robot, scene1, path_ori_free, settings)
+        planner.step()
+        planner.step()
+        planner.step()
+        joint_path = planner.joint_path
 
         fig, ax = get_default_axes3d()
         scene1.plot(ax, c="g")
-        robot.animate_path(fig, ax, joint_path.joint_path)
+        robot.animate_path(fig, ax, joint_path.joint_positions)
+        plt.show(block=True)
 

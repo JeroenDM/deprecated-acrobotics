@@ -1,4 +1,4 @@
 class JointPath:
-    def __init__(self, joint_path, cost):
-        self.joint_path = joint_path
+    def __init__(self, joint_positions, cost):
+        self.joint_positions = joint_positions
         self.cost = cost

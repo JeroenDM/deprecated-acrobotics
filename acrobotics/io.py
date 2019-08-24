@@ -7,7 +7,7 @@ from .pyquat_extended import QuaternionExtended as Quaternion
 from numpy.linalg import norm
 
 from .geometry import Shape, Scene
-from .path.path_pt import FreeOrientationPt, TolPositionPt
+from .path.path_pt import TolPositionPt, TolQuatPt
 from .path.toleranced_number import TolerancedNumber
 from .util import rot_x, rot_y, rot_z
 from .planning import PlanningTask
@@ -43,7 +43,8 @@ def create_circle(mid, start, axis, num_points):
 
 
 def create_orientation_free_path(pos):
-    return [FreeOrientationPt(pi) for pi in pos]
+    quat = Quaternion()
+    return [TolQuatPt(pi, quat) for pi in pos]
 
 
 def create_symmetric_position_tolerance(pos, rpy, pos_tol):
