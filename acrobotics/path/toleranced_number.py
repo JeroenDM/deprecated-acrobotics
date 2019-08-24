@@ -74,4 +74,5 @@ class TolerancedQuaternion(IsToleranced):
         raise NotImplementedError
 
     def reduce_bounds(self, prev_value, reduction_factor):
+        self.quat = prev_value
         self.dist = self.dist / reduction_factor
