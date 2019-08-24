@@ -4,33 +4,38 @@ from numpy.testing import assert_almost_equal
 from acrobotics.dp import *
 
 
-def test_calculate_value_function():
-    C1 = np.array([550, 900, 770], ndmin=2)
-    C2 = np.array([[680, 790, 1050], [580, 760, 660], [510, 700, 830]])
-    C3 = np.array([[610, 790], [540, 940], [790, 270]])
-    C4 = np.array([[1030], [1390]])
-    transition_costs = [C1, C2, C3, C4]
+class TestBookExample:
+    """
+    Example from Operations research book.
+    """
 
-    vind, v = calculate_value_function(transition_costs)
+    def test_calculate_value_function(self):
+        C1 = np.array([550, 900, 770], ndmin=2)
+        C2 = np.array([[680, 790, 1050], [580, 760, 660], [510, 700, 830]])
+        C3 = np.array([[610, 790], [540, 940], [790, 270]])
+        C4 = np.array([[1030], [1390]])
+        transition_costs = [C1, C2, C3, C4]
 
-    v_exact = [
-        np.array([2870.0]),
-        np.array([2320, 2220, 2150]),
-        np.array([1640, 1570, 1660]),
-        np.array([1030, 1390]),
-        np.array([0.0]),
-    ]
+        vind, v = calculate_value_function(transition_costs)
 
-    v_ind_exact = [[0], [0, 0, 0], [0, 0, 1], [0, 0], [0]]
+        v_exact = [
+            np.array([2870.0]),
+            np.array([2320, 2220, 2150]),
+            np.array([1640, 1570, 1660]),
+            np.array([1030, 1390]),
+            np.array([0.0]),
+        ]
 
-    print(v)
-    assert len(v) == len(v_exact)
-    for v1, v2 in zip(v, v_exact):
-        assert_almost_equal(v1, v2)
+        v_ind_exact = [[0], [0, 0, 0], [0, 0, 1], [0, 0], [0]]
 
-    assert len(vind) == len(v_ind_exact)
-    for v1, v2 in zip(vind, v_ind_exact):
-        assert_almost_equal(v1, v2)
+        print(v)
+        assert len(v) == len(v_exact)
+        for v1, v2 in zip(v, v_exact):
+            assert_almost_equal(v1, v2)
+
+        assert len(vind) == len(v_ind_exact)
+        for v1, v2 in zip(vind, v_ind_exact):
+            assert_almost_equal(v1, v2)
 
 
 @pytest.fixture
@@ -51,41 +56,40 @@ def simple_graph():
     return data, C_exact, v_exact, v_ind_exact, path
 
 
-def test_apply_cost_function(simple_graph):
-    def f(d1, d2):
-        """L1 norm cost function. """
-        ci = np.zeros((len(d1), len(d2)))
-        for i in range(len(d1)):
-            for j in range(len(d2)):
-                ci[i, j] = np.sum(np.abs(d1[i] - d2[j]))
-        return ci
+class TestSimpleGraph:
+    def test_apply_cost_function(self, simple_graph):
+        def f(d1, d2):
+            """L1 norm cost function. """
+            ci = np.zeros((len(d1), len(d2)))
+            for i in range(len(d1)):
+                for j in range(len(d2)):
+                    ci[i, j] = np.sum(np.abs(d1[i] - d2[j]))
+            return ci
 
-    C = apply_cost_function(simple_graph[0], f)
+        C = apply_cost_function(simple_graph[0], f)
 
-    assert len(C) == len(simple_graph[1])
-    for ca, cb in zip(C, simple_graph[1]):
-        assert ca.shape == cb.shape
-        assert_almost_equal(ca, cb)
+        assert len(C) == len(simple_graph[1])
+        for ca, cb in zip(C, simple_graph[1]):
+            assert ca.shape == cb.shape
+            assert_almost_equal(ca, cb)
 
+    def test_calculate_value_function(self, simple_graph):
+        v_ind, v = calculate_value_function(simple_graph[1])
 
-def test_calculate_value_function(simple_graph):
-    v_ind, v = calculate_value_function(simple_graph[1])
+        print(v)
+        assert len(v) == len(simple_graph[2])
+        for v1, v2 in zip(v, simple_graph[2]):
+            assert_almost_equal(v1, v2)
 
-    print(v)
-    assert len(v) == len(simple_graph[2])
-    for v1, v2 in zip(v, simple_graph[2]):
-        assert_almost_equal(v1, v2)
+        assert len(v_ind) == len(simple_graph[3])
+        for v1, v2 in zip(v_ind, simple_graph[3]):
+            assert_almost_equal(v1, v2)
 
-    assert len(v_ind) == len(simple_graph[3])
-    for v1, v2 in zip(v_ind, simple_graph[3]):
-        assert_almost_equal(v1, v2)
+    def test_extract_shortest_path(self, simple_graph):
+        shortest_path = extract_shortest_path(
+            simple_graph[0], simple_graph[3], simple_graph[2]
+        )
 
-
-def test_extract_shortest_path(simple_graph):
-    shortest_path = extract_shortest_path(
-        simple_graph[0], simple_graph[3], simple_graph[2]
-    )
-
-    assert len(shortest_path) == len(simple_graph[4])
-    for v1, v2 in zip(shortest_path, simple_graph[4]):
-        assert_almost_equal(v1, v2)
+        assert len(shortest_path) == len(simple_graph[4])
+        for v1, v2 in zip(shortest_path, simple_graph[4]):
+            assert_almost_equal(v1, v2)

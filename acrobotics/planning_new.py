@@ -1,6 +1,9 @@
 import numpy as np
 from typing import List, Callable
 from enum import Enum
+from acrolib.cost_functions import norm_l1
+from acrolib.dynamic_programming import shortest_path
+
 from .samplers import SampleMethod
 from .geometry import Scene
 from typing import List
@@ -31,7 +34,7 @@ class Planner:
             self.first_step = False
 
         joint_solutions = self.path_to_joint_solutions()
-        self.find_shortest_joint_path(joint_solutions)
+        self.find_shortest_joint_path_dp(joint_solutions)
 
     def reset(self):
         self.first_step = False
@@ -79,6 +82,13 @@ class Planner:
             joint_path.append(js[index])
 
         self.joint_path = JointPath(joint_path, cost)
+
+    def find_shortest_joint_path_dp(self, joint_solutions):
+        res = shortest_path(joint_solutions, norm_l1)
+        if res["success"]:
+            self.joint_path = JointPath(res["path"], res["length"])
+        else:
+            raise ValueError("Failed to find a shortest path in joint_solutions.")
 
 
 def _check_dtype(Q):
