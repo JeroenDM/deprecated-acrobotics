@@ -3918,6 +3918,56 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_Graph_set_weights(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  Graph *arg1 = (Graph *) 0 ;
+  float *arg2 = (float *) 0 ;
+  int arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyArrayObject *array2 = NULL ;
+  int is_new_object2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:Graph_set_weights",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_Graph, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Graph_set_weights" "', argument " "1"" of type '" "Graph *""'"); 
+  }
+  arg1 = reinterpret_cast< Graph * >(argp1);
+  {
+    npy_intp size[1] = {
+      -1 
+    };
+    array2 = obj_to_array_contiguous_allow_conversion(obj1,
+      NPY_FLOAT,
+      &is_new_object2);
+    if (!array2 || !require_dimensions(array2, 1) ||
+      !require_size(array2, size, 1)) SWIG_fail;
+    arg2 = (float*) array_data(array2);
+    arg3 = (int) array_size(array2,0);
+  }
+  (arg1)->set_weights(arg2,arg3);
+  resultobj = SWIG_Py_Void();
+  {
+    if (is_new_object2 && array2)
+    {
+      Py_DECREF(array2); 
+    }
+  }
+  return resultobj;
+fail:
+  {
+    if (is_new_object2 && array2)
+    {
+      Py_DECREF(array2); 
+    }
+  }
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_Graph_print_graph_data(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   Graph *arg1 = (Graph *) 0 ;
@@ -4217,6 +4267,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"delete_dijkstraSortFunction", _wrap_delete_dijkstraSortFunction, METH_VARARGS, NULL},
 	 { (char *)"dijkstraSortFunction_swigregister", dijkstraSortFunction_swigregister, METH_VARARGS, NULL},
 	 { (char *)"Graph_add_data_column", _wrap_Graph_add_data_column, METH_VARARGS, NULL},
+	 { (char *)"Graph_set_weights", _wrap_Graph_set_weights, METH_VARARGS, NULL},
 	 { (char *)"Graph_print_graph_data", _wrap_Graph_print_graph_data, METH_VARARGS, NULL},
 	 { (char *)"Graph_init", _wrap_Graph_init, METH_VARARGS, NULL},
 	 { (char *)"Graph_reset", _wrap_Graph_reset, METH_VARARGS, NULL},
