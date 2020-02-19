@@ -1,0 +1,32 @@
+{
+    "paths": [
+        {
+            "name": "weld_line_1",
+            "type": "LINE",
+            "tolerance": "euler_tolerance",
+            "rpy_tol": [
+                0.5,
+                0,
+                3.1415
+            ],
+            "start_pose": {
+                "xyz": [
+                    -0.69,
+                    0.35,
+                    0.05
+                ],
+                "rpy": [
+                    -2.35619449,
+                    0,
+                    3.14159265
+                ]
+            },
+            "end_point": [
+                0.69,
+                0.35,
+                0.05
+            ],
+            "num_points": 10
+        }
+    ]
+}

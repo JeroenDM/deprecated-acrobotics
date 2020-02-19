@@ -1,0 +1,88 @@
+{
+    "paths": [
+        {
+            "name": "approach_1",
+            "type": "LINE",
+            "tolerance": "euler_tolerance",
+            "rpy_tol": [
+                0.0,
+                0.0,
+                180
+            ],
+            "start_pose": {
+                "xyz": [
+                    0.98,
+                    -0.1,
+                    0.05
+                ],
+                "rpy": [
+                    135,
+                    20,
+                    0
+                ]
+            },
+            "end_point": [
+                0.99,
+                -0.15,
+                0
+            ],
+            "num_points": 10
+        },
+        {
+            "name": "weld_1",
+            "type": "LINE",
+            "tolerance": "euler_tolerance",
+            "rpy_tol": [
+                0.0,
+                0.0,
+                180
+            ],
+            "start_pose": {
+                "xyz": [
+                    0.99,
+                    -0.15,
+                    0
+                ],
+                "rpy": [
+                    -2.35619449,
+                    0,
+                    3.14159265
+                ]
+            },
+            "end_point": [
+                0.72,
+                -0.1,
+                0.05
+            ],
+            "num_points": 10
+        },
+        {
+            "name": "retract_1",
+            "type": "LINE",
+            "tolerance": "euler_tolerance",
+            "rpy_tol": [
+                0.0,
+                0.0,
+                180
+            ],
+            "start_pose": {
+                "xyz": [
+                    0.71,
+                    -0.15,
+                    0
+                ],
+                "rpy": [
+                    135,
+                    -20,
+                    0
+                ]
+            },
+            "end_point": [
+                0.72,
+                -0.1,
+                0.05
+            ],
+            "num_points": 10
+        }
+    ]
+}

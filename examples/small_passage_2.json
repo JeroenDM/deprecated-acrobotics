@@ -1,36 +1,81 @@
 {
-  "name" : "line_orient_free",
-  "path" :
-  {
-    "type" : "LINE",
-    "tolerance" : "orientation_free",
-    "start_pose" :
-    {
-      "xyz" : [0.8, -0.1, 0.0],
-      "rpy" : [0.0, 0.0, 0.0]
+  "name": "line_orient_free",
+  "path": {
+    "type": "LINE",
+    "tolerance": "orientation_free",
+    "start_pose": {
+      "xyz": [
+        0.8,
+        -0.1,
+        0.0
+      ],
+      "rpy": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
-    "end_point" : [0.8, 0.1, 0.0],
-    "num_points" : 15
+    "end_point": [
+      0.8,
+      0.1,
+      0.0
+    ],
+    "num_points": 15
   },
-  "obstacles" :
-  [
+  "obstacles": [
     {
-      "type" : "box",
-      "size" : [0.1, 0.03, 0.2],
-      "xyz" : [0.7325, 0.0, 0.0],
-      "rpy" : [0.0, 0.0, 0.0]
+      "type": "box",
+      "size": [
+        0.1,
+        0.03,
+        0.2
+      ],
+      "xyz": [
+        0.7325,
+        0.0,
+        0.0
+      ],
+      "rpy": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     {
-      "type" : "box",
-      "size" : [0.1, 0.03, 0.2],
-      "xyz" : [0.8675, 0.0, 0.0],
-      "rpy" : [0.0, 0.0, 0.0]
+      "type": "box",
+      "size": [
+        0.1,
+        0.03,
+        0.2
+      ],
+      "xyz": [
+        0.8675,
+        0.0,
+        0.0
+      ],
+      "rpy": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     {
-      "type" : "box",
-      "size" : [0.035, 0.03, 0.1],
-      "xyz" : [0.8, 0.0, 0.05],
-      "rpy" : [0.0, 0.0, 0.0]
+      "type": "box",
+      "size": [
+        0.035,
+        0.03,
+        0.1
+      ],
+      "xyz": [
+        0.8,
+        0.0,
+        0.05
+      ],
+      "rpy": [
+        0.0,
+        0.0,
+        0.0
+      ]
     }
   ]
 }

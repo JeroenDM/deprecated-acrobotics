@@ -1,0 +1,25 @@
+{
+    "paths": [
+        {
+            "name": "line_orient_free",
+            "type": "CIRC",
+            "tolerance": "orientation_free",
+            "mid": [
+                0.8,
+                0.0,
+                0.1
+            ],
+            "start": [
+                0.6,
+                0.0,
+                0.1
+            ],
+            "axis": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "num_points": 15
+        }
+    ]
+}
