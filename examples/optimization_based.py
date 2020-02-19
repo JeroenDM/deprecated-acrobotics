@@ -24,7 +24,7 @@ q_ik = robot.ik(Tee)["sol"]
 q_inits = [np.tile(qi, (N, 1)) for qi in q_ik]
 
 
-qp_sol = get_optimal_path(path_ori_free, robot, scene, q_init=q_inits[5])["sol"]
+qp_sol = get_optimal_path(path_ori_free, robot, scene, q_init=q_inits[5])["path"]
 
 import matplotlib.pyplot as plt
 
