@@ -15,16 +15,18 @@ t = 0.01
 
 bottom = Shape(l, w, t)
 top = Shape(l, w, t)
-back = Shape(l-2*t, t, h)
+back = Shape(l - 2 * t, t, h)
 left = Shape(t, w, h)
 right = Shape(t, w, h)
 
-#workpiece = [bottom, top, back, left, right]
-workpiece_tf = [pose_x(0, 0, 0, t/2),
-                pose_x(0, 0, 0, h + 3*t/2),
-                pose_x(0, 0, w/2 - t/2, h/2 + t),
-                pose_x(0, l/2 - t/2, 0, h/2 + t),
-                pose_x(0, -l/2 + t/2, 0, h/2 + t)]
+# workpiece = [bottom, top, back, left, right]
+workpiece_tf = [
+    pose_x(0, 0, 0, t / 2),
+    pose_x(0, 0, 0, h + 3 * t / 2),
+    pose_x(0, 0, w / 2 - t / 2, h / 2 + t),
+    pose_x(0, l / 2 - t / 2, 0, h / 2 + t),
+    pose_x(0, -l / 2 + t / 2, 0, h / 2 + t),
+]
 
 workpiece = Collection([bottom, top, back, left, right], workpiece_tf)
 
@@ -62,7 +64,7 @@ path2 = create_weld_line(
 
 path3 = create_weld_line(
     np.array([l / 2 - t, -w / 2 + marge, t]),
-    np.array([l / 2 - t, w / 2 - t - marge -0.4, t]),
+    np.array([l / 2 - t, w / 2 - t - marge - 0.4, t]),
     [0, 3 * np.pi / 4, np.pi / 2],
     np.array([-0.04, 0, 0.04]),
     6,
