@@ -190,6 +190,7 @@ class FreeOrientationPt:
 
     def __init__(self, position):
         self.p = np.array(position)
+        self.p_nominal = np.hstack((self.p, [0, 0, 0]))
 
     def get_samples(self, num_samples, dist=None, **kwargs):
         """ Sample orientation (position is fixed)
