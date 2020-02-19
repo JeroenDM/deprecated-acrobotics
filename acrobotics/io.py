@@ -7,7 +7,7 @@ from pyquaternion import Quaternion
 from numpy.linalg import norm
 
 from .geometry import Shape, Collection
-from .path import FreeOrientationPt, TolPositionPt, TolerancedNumber
+from .path import FreeOrientationPt, TolPositionPt, TolerancedNumber, TolEulerPt
 from .util import rot_x, rot_y, rot_z
 from .planning import PlanningTask
 
@@ -59,6 +59,28 @@ def create_symmetric_position_tolerance(pos, rpy, pos_tol):
     return path
 
 
+def guess_angle_unit(val):
+    if val > 10:
+        return np.deg2rad(val)
+    else:
+        return val
+
+
+def create_symmetric_euler_tolerance(pos, rpy, rpy_tol):
+    rpy = [guess_angle_unit(v) for v in rpy]
+    rpy_tol = [guess_angle_unit(v) for v in rpy_tol]
+    path = []
+    for p_nominal in pos:
+        rpy_input = []
+        for pi, tol in zip(rpy, rpy_tol):
+            if tol > 0.0:
+                rpy_input.append(TolerancedNumber(pi - tol, pi + tol))
+            else:
+                rpy_input.append(pi)
+        path.append(TolEulerPt(p_nominal, rpy_input))
+    return path
+
+
 def parse_path(d):
     pd = d["path"]
 
@@ -76,6 +98,10 @@ def parse_path(d):
     elif pd["tolerance"] == "position_tolerance":
         path = create_symmetric_position_tolerance(
             pos, pd["start_pose"]["rpy"], pd["xyz_tol"]
+        )
+    elif pd["tolerance"] == "euler_tolerance":
+        path = create_symmetric_euler_tolerance(
+            pos, pd["start_pose"]["rpy"], pd["rpy_tol"]
         )
     else:
         msg = "Unkown tolerance type: '{}'\n".format(pd["tolerance"])
@@ -126,6 +152,16 @@ def load_settings(filepath):
     with open(filepath) as file:
         data = json.load(file)
     return data
+
+
+def import_paths(filepath):
+    with open(filepath) as file:
+        path_data = json.load(file)
+
+    paths = []
+    for path in path_data["paths"]:
+        paths.append(parse_path({"path": path}))
+    return paths
 
 
 if __name__ == "__main__":
